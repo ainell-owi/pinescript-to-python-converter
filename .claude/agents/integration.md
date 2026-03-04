@@ -26,7 +26,7 @@ When creating the PR via GitHub MCP, the body MUST follow this structured format
 ### Title: `feat: Add <StrategyName> Strategy`
 
 ### Body:
-## 🛠 Conversion Audit Trail
+## Conversion Audit Trail
 *This section documents the AI's internal process for transparency.*
 
 ### Summary
