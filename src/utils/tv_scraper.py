@@ -39,7 +39,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("TV_Scraper")
 
-# ── Listing page ──────────────────────────────────────────────────────────────
+# ── Listing page constants ─────────────────────────────────────────────────────
 STRATEGIES_LISTING_URL = "https://www.tradingview.com/scripts/?script_type=strategies"
 _LISTING_ANCHOR_SELECTOR = "a[href*='/script/']"
 _SCRIPT_URL_RE   = re.compile(r"/script/[A-Za-z0-9]+-[^/]+/$")
