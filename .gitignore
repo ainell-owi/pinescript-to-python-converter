@@ -210,4 +210,5 @@ __marimo__/
 output/
 archive/
 strategies_registry.json
+seen_urls.json
 logs/

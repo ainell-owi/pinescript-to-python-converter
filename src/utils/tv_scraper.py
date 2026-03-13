@@ -22,7 +22,6 @@ Extraction strategy (in order):
 import hashlib
 import re
 import time
-import random
 import logging
 import subprocess
 import urllib.request
@@ -42,6 +41,8 @@ logger = logging.getLogger("TV_Scraper")
 
 # ── Listing page constants ─────────────────────────────────────────────────────
 STRATEGIES_LISTING_URL = "https://www.tradingview.com/scripts/?script_type=strategies"
+EDITORS_PICKS_URL      = "https://www.tradingview.com/scripts/editors-picks/?script_type=strategies"
+_MAX_PAGES = 20  # Hard cap for pagination to prevent runaway scraping
 _LISTING_ANCHOR_SELECTOR = "a[href*='/script/']"
 _SCRIPT_URL_RE   = re.compile(r"/script/[A-Za-z0-9]+-[^/]+/$")
 _SCRIPT_PARTS_RE = re.compile(r"/script/([A-Za-z0-9]+)-([^/]+)/?$")
@@ -167,15 +168,21 @@ class TradingViewScraper:
         self,
         page_url: str = STRATEGIES_LISTING_URL,
         max_results: int = 10,
+        page: int = 1,
     ) -> list[str]:
-        """Scrape listing page and return up to max_results strategy URLs."""
+        """Scrape listing page and return up to max_results strategy URLs.
+
+        Args:
+            page_url:    Base listing URL to scrape.
+            max_results: Maximum number of URLs to return.
+            page:        Page number to fetch (1-based). Pass explicitly for
+                         deterministic pagination; defaults to 1.
+        """
         if not self.driver:
             self.start_driver()
 
-        # Randomise the page so each run fetches different strategies.
-        page_num = random.randint(1, 10)
         sep = "&" if "?" in page_url else "?"
-        url_with_page = f"{page_url}{sep}page={page_num}"
+        url_with_page = f"{page_url}{sep}page={page}"
         logger.info(f"Fetching strategy list from: {url_with_page}")
         self.driver.get(url_with_page)
 
@@ -206,6 +213,63 @@ class TradingViewScraper:
 
         logger.info(f"Found {len(urls)} strategy URL(s).")
         return urls
+
+    def _fetch_new_urls(
+        self,
+        base_url: str,
+        target: int,
+        seen_urls: set[str],
+    ) -> list[str]:
+        """Paginate through base_url, returning up to target URLs not in seen_urls.
+
+        Starts at page 1 and increments until target is reached, the listing
+        is exhausted (page returns 0 results), or _MAX_PAGES is hit.
+        """
+        results: list[str] = []
+        for page_num in range(1, _MAX_PAGES + 1):
+            page_urls = self.fetch_strategy_list(
+                page_url=base_url,
+                max_results=50,
+                page=page_num,
+            )
+            if not page_urls:
+                logger.info(f"No results on page {page_num} for {base_url} — stopping pagination.")
+                break
+            for url in page_urls:
+                if url not in seen_urls and url not in results:
+                    results.append(url)
+                    if len(results) >= target:
+                        return results
+        return results
+
+    def fetch_from_two_sources(
+        self,
+        n_per_source: int,
+        seen_urls: set[str],
+    ) -> list[tuple[str, str]]:
+        """Fetch n_per_source new URLs from Popular and n_per_source from Editor's Picks.
+
+        Cross-source deduplication is enforced: an Editor's Picks URL that already
+        appeared in the Popular results (or in seen_urls) is skipped, so the combined
+        list contains only fully unique, never-before-seen URLs.
+
+        Returns:
+            list of (url, source_tag) tuples where source_tag is "popular" or
+            "editors_pick". Up to n_per_source * 2 entries (may be fewer if
+            listings are exhausted).
+        """
+        popular = self._fetch_new_urls(STRATEGIES_LISTING_URL, n_per_source, seen_urls)
+        logger.info(f"Popular source: {len(popular)} new URL(s) found.")
+
+        # Pass the union of persisted seen_urls + freshly collected popular URLs
+        # so Editor's Picks deduplication works across both sources.
+        combined_seen = seen_urls | set(popular)
+        editors = self._fetch_new_urls(EDITORS_PICKS_URL, n_per_source, combined_seen)
+        logger.info(f"Editor's Picks source: {len(editors)} new URL(s) found.")
+
+        popular_tagged = [(url, "popular") for url in popular]
+        editors_tagged = [(url, "editors_pick") for url in editors]
+        return popular_tagged + editors_tagged
 
     def fetch_pinescript(self, strategy_url: str) -> Optional[str]:
         """
@@ -267,27 +331,48 @@ class TradingViewScraper:
         pine_source: str,
         strategy_url: str,
         input_dir: str = _PROJECT_INPUT_DIR,
+        source: str = "",
     ) -> Path:
         """Save PineScript to input/{strategy_slug}.pine.
 
-        Skips the write if an identical file already exists (hash-based dedup)
-        to avoid overwriting in-progress conversions with the same content.
+        Deduplication is always based on the RAW PineScript content (no source
+        comment), so the same strategy is correctly identified as a duplicate
+        regardless of whether it was scraped or manually pasted.  The
+        ``// SOURCE:`` comment is injected only after the uniqueness check
+        passes, immediately before writing to disk.
+
+        Args:
+            pine_source:  Raw PineScript code as fetched from TradingView.
+            strategy_url: URL used to derive the output filename slug.
+            input_dir:    Destination directory (default: project ``input/``).
+            source:       Scrape origin tag injected as the first line comment
+                          (e.g. ``"popular"`` or ``"editors_pick"``).  Empty
+                          string (default) means no comment is prepended —
+                          used for manually-inserted files.
         """
         slug = self._extract_strategy_slug(strategy_url)
         output_path = Path(input_dir) / f"{slug}.pine"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        new_hash = hashlib.sha256(pine_source.encode("utf-8")).hexdigest()
+        # 1. Hash the RAW source — source tag is NOT part of content identity.
+        raw_hash = hashlib.sha256(pine_source.encode("utf-8")).hexdigest()
         if output_path.exists():
-            # Read as text (same encoding) so Windows \r\n normalisation matches
-            existing_hash = hashlib.sha256(
-                output_path.read_text(encoding="utf-8").encode("utf-8")
-            ).hexdigest()
-            if new_hash == existing_hash:
+            existing_text = output_path.read_text(encoding="utf-8")
+            # Strip the source comment from the on-disk file before hashing so
+            # that files saved with a tag compare equal to the same raw content
+            # saved without one (e.g. manually-pasted vs. scraped duplicate).
+            if existing_text.startswith("// SOURCE:"):
+                existing_raw = existing_text.split("\n", 1)[1] if "\n" in existing_text else ""
+            else:
+                existing_raw = existing_text
+            existing_hash = hashlib.sha256(existing_raw.encode("utf-8")).hexdigest()
+            if raw_hash == existing_hash:
                 logger.info(f"Skipped duplicate (identical content): {output_path}")
                 return output_path
 
-        output_path.write_text(pine_source, encoding="utf-8")
+        # 2. Uniqueness confirmed — prepend source comment, then write.
+        content_to_write = f"// SOURCE: {source}\n{pine_source}" if source else pine_source
+        output_path.write_text(content_to_write, encoding="utf-8")
         logger.info(f"Saved: {output_path}")
         return output_path
 

@@ -40,6 +40,18 @@ Delegate tasks to the appropriate specialist agents:
      3. Ask for instructions (e.g., "The Validator found a lookahead bias. How should we proceed?").
    - Do NOT attempt to auto-fix unless explicitly instructed by the sub-agent's output.
 
+4. **Report File Verification (Anti-Laziness Gate):**
+   A sub-agent's response is only accepted as "SUCCESS" when it **explicitly states the
+   absolute path** to its written `agent_*.md` report file in its response text.
+   - If the agent says "SUCCESS" but omits the report path: **REJECT** the response.
+   - Do NOT proceed to the next agent. Re-prompt the offending agent:
+     > "Your response is REJECTED. You claimed SUCCESS but did not provide the path to
+     > your report file. Write your full decision log to:
+     > `<output_snapshot>/agent_<yourname>.md`
+     > Then re-state SUCCESS and include the absolute path of the written file."
+   - After resubmission, use your **Read tool** to open the reported path and confirm
+     the file exists and is non-empty before proceeding to the next agent.
+
 # Initialization
 When the user provides a PineScript file (or asks to process `input/source_strategy.pine`), initiate **Phase 1** of the Conversion Flow immediately.
 

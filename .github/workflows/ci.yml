@@ -1,15 +1,25 @@
 name: PR Strategy Tests
 
 # 1. TRIGGERS: Define exactly when this workflow should run
+#
+# PRs are opened automatically by the Integration Agent via GitHub MCP.
+# If this workflow stops triggering on new PRs, first check the GitHub Actions tab —
+# it may have been accidentally disabled via the GUI
+# (Actions → "PR Strategy Tests" → "Enable workflow").
 on:
   pull_request:
     branches: [ main ]
+    # Explicit types prevent reliance on GitHub's undocumented defaults.
+    types: [opened, synchronize, reopened]
     # The 'paths' filter ensures the CI only runs if strategy files or tests were modified.
     # This prevents wasting CI minutes on unrelated changes (e.g., editing a README).
     paths:
       - 'src/strategies/**'
       - 'tests/**'
       - 'requirements.txt'
+  # Manual escape hatch: re-trigger CI on any branch from the Actions tab
+  # without needing to push a new commit (useful after a GUI disable/re-enable cycle).
+  workflow_dispatch:
 
 # 2. JOBS: Define the actual tasks the GitHub runner will execute
 jobs:

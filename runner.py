@@ -28,7 +28,9 @@ ARCHIVE_DIR             = Path("archive")
 OUTPUT_DIR              = Path("output")
 LOGS_ROOT               = Path("logs")
 ARCHIVE_SCORE_THRESHOLD = 4   # btc + proj < this → archive; >= this → keep
-TARGET_STRATEGY_COUNT   = 5   # minimum .pine files to keep in input/
+TARGET_STRATEGY_COUNT   = 6   # minimum .pine files to keep in input/ (3 Popular + 3 Editor's Picks)
+MAX_SEARCH_LOOPS        = 5   # retry cap for auto-selection before giving up
+SEEN_URLS_PATH          = Path("seen_urls.json")   # persisted global URL dedup store
 _EXCLUDED_PINE_FILES    = {"source_strategy.pine"}   # placeholder files to ignore
 
 
@@ -183,12 +185,22 @@ def scan_and_register(registry: dict) -> dict:
         if key in _EXCLUDED_PINE_FILES:
             continue
         if key not in registry:
+            # Extract scrape source from the injected PineScript comment (first line).
+            try:
+                first_line = pine_file.read_text(encoding="utf-8", errors="replace").splitlines()[0]
+            except OSError:
+                first_line = ""
+            scrape_source = "unknown"
+            if first_line.startswith("// SOURCE:"):
+                scrape_source = first_line.removeprefix("// SOURCE:").strip()
+
             registry[key] = {
                 "file_path":     str(pine_file),
                 "status":        "new",
                 "registered_at": _now_iso(),
+                "scrape_source": scrape_source,
             }
-            logger.info(f"Registered: {key}")
+            logger.info(f"Registered: {key} (source: {scrape_source})")
             added += 1
     if added:
         print(f"  Registered {added} new file(s).")
@@ -198,29 +210,40 @@ def scan_and_register(registry: dict) -> dict:
 # ---------------------------------------------------------------------------
 # TV Scraper fallback (runs when input/ has no .pine files)
 # ---------------------------------------------------------------------------
-def run_tv_scraper(max_results: int = 5) -> None:
+def _load_seen_urls() -> set[str]:
+    """Load the persisted global URL dedup store (O(1) lookup set)."""
+    if SEEN_URLS_PATH.exists():
+        try:
+            return set(json.loads(SEEN_URLS_PATH.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, ValueError):
+            logger.warning("seen_urls.json is corrupt — starting fresh.")
+    return set()
+
+
+def _save_seen_urls(seen_urls: set[str]) -> None:
+    """Persist the global URL dedup store back to disk."""
+    SEEN_URLS_PATH.write_text(json.dumps(sorted(seen_urls), indent=2), encoding="utf-8")
+
+
+def run_tv_scraper(max_results: int = 6) -> None:
     """
     Populates the input directory by scraping public TradingView strategies.
 
-    This function is triggered as a fallback when the 'input/' directory has
-    fewer than the target number of '.pine' files. It initializes a Selenium-based
-    scraper, suppresses its noisy terminal logs by redirecting them to the file
-    handler, and attempts to fetch source codes. It fetches a surplus of URLs
-    to account for private or un-scrapable scripts.
+    Fetches strategies from two sources (Popular + Editor's Picks) split evenly,
+    using a persisted seen_urls.json to guarantee globally unique results across
+    runs. Paginating past previously-seen pages ensures freshness at scale.
 
     Args:
-        max_results (int, optional): The exact number of successful strategy
-            downloads required to fulfill the quota. Defaults to 5.
-
-    Returns:
-        None
+        max_results (int): Target number of new strategy files to download.
+            Evenly split between Popular (max_results // 2) and Editor's Picks
+            (max_results // 2). Defaults to 6.
 
     Raises:
-        SystemExit: Exits the program (sys.exit) if required dependencies
-            are missing, if the scraper runtime fails, or if 0 files were saved.
+        SystemExit: If dependencies are missing, scraper fails, or 0 files saved.
     """
     print(f"\n[SCRAPER] input/ has fewer than {TARGET_STRATEGY_COUNT} strategies.")
     print(f"          Fetching {max_results} more strategy file(s) from TradingView...")
+    print(f"          Sources: Popular (x{max_results // 2}) + Editor's Picks (x{max_results // 2})")
     print(_div())
 
     # Block tv_scraper's logging.basicConfig from adding a root StreamHandler.
@@ -244,16 +267,23 @@ def run_tv_scraper(max_results: int = 5) -> None:
             _lgr.addHandler(_h)
         _lgr.propagate = False
 
+    # Load global URL dedup store (O(1) lookups).
+    seen_urls = _load_seen_urls()
+    logger.info(f"Loaded {len(seen_urls)} previously-seen URL(s) from {SEEN_URLS_PATH}")
+
+    n_per_source = max(1, max_results // 2)
     saved = 0
     failed = 0
 
     try:
         with TradingViewScraper(headless=False) as scraper:
-            # Request extra URLs so we have enough after skipping duplicates.
-            urls = scraper.fetch_strategy_list(max_results=max_results * 3)
-            logger.info(f"TV scraper found {len(urls)} strategy URL(s)")
+            urls = scraper.fetch_from_two_sources(
+                n_per_source=n_per_source,
+                seen_urls=seen_urls,
+            )
+            logger.info(f"TV scraper found {len(urls)} new strategy URL(s) across both sources")
 
-            for i, url in enumerate(urls, 1):
+            for url, scrape_source in urls:
                 if saved >= max_results:
                     break
 
@@ -262,15 +292,17 @@ def run_tv_scraper(max_results: int = 5) -> None:
 
                 if dest.exists():
                     logger.info(f"Skipping already-downloaded: {slug}")
+                    seen_urls.add(url)
                     continue
 
-                print(f"  [{saved + 1}/{max_results}] {slug} ... ", end="", flush=True)
+                print(f"  [{saved + 1}/{max_results}] {slug} [{scrape_source}] ... ", end="", flush=True)
 
                 try:
                     pine = scraper.fetch_pinescript(url)
-                    scraper.save_to_input(pine, url)
+                    scraper.save_to_input(pine, url, source=scrape_source)
                     print(f"[OK]  ({len(pine):,} chars)")
-                    logger.info(f"Scraped: {slug} ({len(pine)} chars)")
+                    logger.info(f"Scraped: {slug} [{scrape_source}] ({len(pine)} chars)")
+                    seen_urls.add(url)
                     saved += 1
                 except NotImplementedError as exc:
                     first_line = str(exc).splitlines()[0]
@@ -286,6 +318,10 @@ def run_tv_scraper(max_results: int = 5) -> None:
         print(f"\n[FATAL] Scraper runtime error: {exc}")
         logger.error(f"TV scraper runtime error: {exc}")
         sys.exit(1)
+    finally:
+        # Always persist the updated seen set — even on partial success.
+        _save_seen_urls(seen_urls)
+        logger.info(f"Saved {len(seen_urls)} URL(s) to {SEEN_URLS_PATH}")
 
     print(_div())
     print(f"  Scraped {saved} strategy file(s) -> input/")
@@ -537,24 +573,23 @@ def run_evaluations(registry: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Phase 1 — User Selection
 # ---------------------------------------------------------------------------
-def display_menu(registry: dict) -> tuple[str, dict]:
+def auto_select_strategy(registry: dict) -> tuple[str | None, dict | None]:
     """
-        Renders an interactive CLI menu for strategy selection.
+    Automatically selects the highest-scoring evaluated strategy for conversion.
 
-        This function filters the registry for successfully evaluated strategies,
-        verifies that their physical files still exist on disk, and sorts them
-        in descending order based on their combined evaluation scores. It displays
-        a formatted table summarizing the options and prompts the user to select
-        one for conversion. It includes robust error handling for user input,
-        defaulting to the top-ranked strategy if the input is invalid or blank.
+    Filters the registry for evaluated (or previously failed) strategies whose
+    source files still exist on disk, ranks them by combined score
+    (btc_score + project_score) descending, and returns the top entry.
+    Ties are broken by insertion order (stable sort).
 
-        Args:
-            registry (dict): The current strategies registry dictionary.
+    Args:
+        registry (dict): The current strategies registry dictionary.
 
-        Returns:
-            tuple[str, dict]: A tuple containing the selected strategy's filename (key)
-                and its corresponding record dictionary.
-        """
+    Returns:
+        tuple[str | None, dict | None]: The selected strategy's filename key and
+            record, or (None, None) if no evaluated strategies are available
+            (caller is responsible for retrying with fresh scraper results).
+    """
     evaluated = {
         k: v for k, v in registry.items()
         if v["status"] in ("evaluated", "failed")  # include failed strategies for retry
@@ -562,8 +597,7 @@ def display_menu(registry: dict) -> tuple[str, dict]:
         and Path(v["file_path"]).exists()
     }
     if not evaluated:
-        print("\n  No evaluated strategies found. Exiting.")
-        sys.exit(1)
+        return None, None
 
     ranked = sorted(
         evaluated.items(),
@@ -587,24 +621,9 @@ def display_menu(registry: dict) -> tuple[str, dict]:
         )
     print(_div())
 
-    best_key, best_rec = ranked[0]
-    print(f"\n  Recommended : {best_key}")
-    print(f"  Reason      : {best_rec.get('recommendation_reason', 'N/A')}\n")
-
-    raw = input("  Enter number to convert [Enter = #1 recommended]: ").strip()
-    if not raw:
-        idx = 0
-    else:
-        try:
-            idx = int(raw) - 1
-            if not (0 <= idx < len(ranked)):
-                raise ValueError
-        except ValueError:
-            print("    Invalid input — defaulting to #1.")
-            idx = 0
-
-    chosen_key, chosen_rec = ranked[idx]
-    print(f"\n    Selected: {chosen_key}\n")
+    chosen_key, chosen_rec = ranked[0]
+    print(f"\n  Auto-selected : {chosen_key}  (highest combined score)")
+    print(f"  Reason        : {chosen_rec.get('recommendation_reason', 'N/A')}\n")
     return chosen_key, chosen_rec
 
 
@@ -905,8 +924,23 @@ if __name__ == "__main__":
     # Step 2 — Evaluate new strategies (isolated, one at a time)
     registry = run_evaluations(registry)
 
-    # Step 3 — User selection
-    chosen_key, chosen_rec = display_menu(registry)
+    # Step 3 — Auto-select the highest-scoring strategy.
+    # If no evaluated strategies exist yet, fetch a fresh batch and retry
+    # (up to MAX_SEARCH_LOOPS times) before giving up.
+    chosen_key, chosen_rec = None, None
+    for _attempt in range(MAX_SEARCH_LOOPS):
+        chosen_key, chosen_rec = auto_select_strategy(registry)
+        if chosen_key is not None:
+            break
+        print(f"\n  No valid strategies found (attempt {_attempt + 1}/{MAX_SEARCH_LOOPS}).")
+        print("  Fetching a fresh batch from TradingView...")
+        run_tv_scraper(max_results=TARGET_STRATEGY_COUNT)
+        registry = scan_and_register(registry)
+        registry = run_evaluations(registry)
+    else:
+        print(f"\n[FAIL] Could not find a valid strategy after {MAX_SEARCH_LOOPS} attempts.")
+        sys.exit(1)
+
     registry[chosen_key]["status"] = "selected"
     save_registry(registry)
 

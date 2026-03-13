@@ -12,11 +12,17 @@ An AI-driven pipeline that converts TradingView Pine Script v5 strategies into v
 # Run the full pipeline (requires Claude CLI in PATH)
 python runner.py
 
-# Run tests
+# Run tests (Linux/macOS)
 pytest tests/strategies/ -v
+
+# Run tests (Windows — use the venv interpreter)
+.venv/Scripts/python.exe -m pytest tests/strategies/ -v
 
 # Run a single test file
 pytest tests/strategies/test_<name>.py -v
+
+# Run integration smoke tests (importability)
+pytest tests/integrations/ -v
 ```
 
 **Dependencies:** TA-Lib requires the C library to be installed separately before `pip install -r requirements.txt`. On Windows use a pre-built wheel; on Linux build from source (see `ci.yml` for the build steps).
@@ -64,10 +70,14 @@ class MyStrategy(BaseStrategy):
 ## Anti-Lookahead Bias Rules
 
 1. All `shift()` operations must use positive integers (backward-looking only).
-2. Multi-timeframe logic **must** use `src/utils/resampling.py`:
+2. Multi-timeframe logic **must** use `src/utils/resampling.py` (import as `from src.utils.resampling import ...`):
    - `resample_to_interval(df, interval)` — upsample base data to higher TF
    - `resampled_merge(original, resampled)` — merge back with `ffill`, shifting resampled timestamps to prevent future-peeking
 3. **Forbidden:** `df.resample()` directly inside a strategy, `future_shift`, `barstate.isrealtime`.
+
+## Allowed Libraries in Generated Strategies
+
+Strategies may only import from: `pandas`, `numpy`, `talib`, and `src.*`. No other third-party libraries. If a TA-Lib indicator is missing, implement it in pure Pandas/NumPy inside the strategy file.
 
 ## Missing TA-Lib Indicators
 
@@ -118,6 +128,17 @@ All generated strategy tests must use this fixture. The warmup phase ensures `mi
 | `tests/integrations/` | Importability smoke tests for all generated strategies |
 | `.claude/agents/` | Agent persona definitions |
 | `.github/workflows/ci.yml` | CI pipeline definition — fully commented out (disabled), runs `pytest tests/strategies/` |
+
+## Agent Decision Logs (Output Snapshot)
+
+Each conversion run produces a per-run snapshot directory (passed by `runner.py` to the orchestrator). Each sub-agent writes a Markdown decision log there:
+
+- `agent_transpiler.md` — mapping table, warnings, files written
+- `agent_validator.md` — checklist results
+- `agent_test_generator.md` — test design decisions
+- `agent_integration.md` — branch name, PR URL, pass/fallback status
+
+The Integration Agent must output exactly `INTEGRATION_PASS` or `INTEGRATION_FALLBACK` so `runner.py` can parse the result.
 
 ## `/convert` Slash Command
 
