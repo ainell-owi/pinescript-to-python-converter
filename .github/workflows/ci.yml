@@ -67,4 +67,4 @@ jobs:
     # Scans the test directory and strictly executes every V&V test created by the Test Generator Agent.
     - name: Run Tests with Pytest
       run: |
-        pytest tests/ -v
+        PYTHONPATH=. pytest tests/ -v

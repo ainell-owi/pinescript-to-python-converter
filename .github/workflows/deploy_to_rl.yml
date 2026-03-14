@@ -1,0 +1,204 @@
+name: Deploy Strategies to RL Training
+
+# Trigger: fires when a PR targeting main is closed.
+# The job-level 'if' guard below ensures we only proceed when the PR was
+# actually merged (not just closed/abandoned).
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only run when the PR was genuinely merged, not just closed.
+    if: github.event.pull_request.merged == true
+
+    steps:
+    # Step 1: Checkout the converter repository (this repo) so we can
+    # inspect the diff and read the strategy files that were just merged.
+    - name: Checkout converter repo
+      uses: actions/checkout@v4
+      with:
+        # Fetch full history so git diff against the base SHA works correctly.
+        fetch-depth: 0
+
+    # Step 2: Checkout the rl-training repository into a subdirectory.
+    # RL_TRAINING_PAT must be a repo secret with write access to rl-training.
+    - name: Checkout rl-training repo
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository_owner }}/rl-training
+        token: ${{ secrets.RL_TRAINING_PAT }}
+        path: rl-repo
+
+    # Step 3: Identify any NEW *_strategy.py files added by this PR.
+    # --diff-filter=A restricts to files that were Added (not modified/deleted).
+    # Result is stored in NEW_FILES and exported for the steps that follow.
+    - name: Identify new strategy files
+      id: detect
+      run: |
+        NEW_FILES=$(git diff --name-only --diff-filter=A \
+          "${{ github.event.pull_request.base.sha }}" HEAD \
+          -- 'src/strategies/*_strategy.py')
+        echo "new_files<<EOF" >> "$GITHUB_OUTPUT"
+        echo "$NEW_FILES" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+        if [ -z "$NEW_FILES" ]; then
+          echo "No new strategy files detected. Skipping deployment."
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "New files detected:"
+          echo "$NEW_FILES"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    # Step 4: Safe copy — loop over every new strategy file and copy it
+    # into rl-repo/strategies/. The -n flag (no-clobber) ensures we NEVER
+    # overwrite a strategy that already exists in the rl-training repo.
+    - name: Copy new strategies to rl-training
+      if: steps.detect.outputs.skip == 'false'
+      run: |
+        mkdir -p rl-repo/strategies
+        while IFS= read -r FILE; do
+          [ -z "$FILE" ] && continue
+          BASENAME=$(basename "$FILE")
+          if [ -f "rl-repo/strategies/$BASENAME" ]; then
+            echo "SKIP (already exists): $BASENAME"
+          else
+            cp "$FILE" "rl-repo/strategies/$BASENAME"
+            echo "Copied: $BASENAME"
+          fi
+        done <<< "${{ steps.detect.outputs.new_files }}"
+
+    # Step 5: Update the rl-training strategies registry.
+    # For each new strategy file:
+    #   - Load the existing JSON registry (or start from {}).
+    #   - Use `ast` to parse the Python file and extract:
+    #       * The class name (first class inheriting BaseStrategy)
+    #       * timeframe and lookback_hours from __init__ keyword defaults
+    #   - Merge the new entry into the registry dict.
+    #   - Write the updated dict back with json.dump (preserves all existing keys).
+    - name: Update rl-training strategies registry
+      if: steps.detect.outputs.skip == 'false'
+      run: |
+        python3 - <<'PYEOF'
+        import ast
+        import json
+        import os
+        import sys
+        from pathlib import Path
+
+        REGISTRY_PATH = Path("rl-repo/strategies/strategies_registry.json")
+        NEW_FILES = """${{ steps.detect.outputs.new_files }}"""
+
+        # Load existing registry — never overwrite from scratch.
+        if REGISTRY_PATH.exists():
+            with REGISTRY_PATH.open("r", encoding="utf-8") as f:
+                registry = json.load(f)
+        else:
+            registry = {}
+
+        def extract_strategy_meta(filepath: Path) -> dict | None:
+            """Parse a strategy .py file and extract class metadata via AST."""
+            try:
+                tree = ast.parse(filepath.read_text(encoding="utf-8"))
+            except SyntaxError as e:
+                print(f"ERROR: Could not parse {filepath}: {e}", file=sys.stderr)
+                return None
+
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                # Accept any class that inherits from BaseStrategy
+                base_names = [
+                    (b.id if isinstance(b, ast.Name) else
+                     b.attr if isinstance(b, ast.Attribute) else "")
+                    for b in node.bases
+                ]
+                if "BaseStrategy" not in base_names:
+                    continue
+
+                class_name = node.name
+                timeframe = None
+                lookback_hours = None
+
+                # Walk the __init__ method to find super().__init__ call kwargs
+                for item in ast.walk(node):
+                    if not (isinstance(item, ast.FunctionDef) and item.name == "__init__"):
+                        continue
+                    for stmt in ast.walk(item):
+                        if not isinstance(stmt, ast.Call):
+                            continue
+                        # Match super().__init__(...) calls
+                        is_super_init = (
+                            isinstance(stmt.func, ast.Attribute)
+                            and stmt.func.attr == "__init__"
+                        )
+                        if not is_super_init:
+                            continue
+                        for kw in stmt.keywords:
+                            if kw.arg == "timeframe" and isinstance(kw.value, ast.Constant):
+                                timeframe = kw.value.value
+                            elif kw.arg == "lookback_hours" and isinstance(kw.value, ast.Constant):
+                                lookback_hours = kw.value.value
+
+                return {
+                    "class_name": class_name,
+                    "timeframe": timeframe,
+                    "lookback_hours": lookback_hours,
+                }
+
+            return None
+
+        updated = []
+        for line in NEW_FILES.strip().splitlines():
+            src_file = line.strip()
+            if not src_file:
+                continue
+            basename = os.path.basename(src_file)
+            dest = Path("rl-repo/strategies") / basename
+            if not dest.exists():
+                print(f"WARNING: {dest} not found, skipping registry update.")
+                continue
+
+            meta = extract_strategy_meta(dest)
+            if meta is None:
+                print(f"WARNING: Could not extract metadata from {basename}, skipping.")
+                continue
+
+            module_name = "strategies." + dest.stem  # e.g. strategies.supertrend_strategy
+            entry = {
+                "enabled": True,
+                "module": module_name,
+                "class_name": meta["class_name"],
+                "timeframe": meta["timeframe"],
+                "lookback_hours": meta["lookback_hours"],
+            }
+            registry[meta["class_name"]] = entry
+            updated.append(meta["class_name"])
+            print(f"Registry entry added: {meta['class_name']} -> {module_name}")
+
+        with REGISTRY_PATH.open("w", encoding="utf-8") as f:
+            json.dump(registry, f, indent=2)
+            f.write("\n")
+
+        print(f"Registry written to {REGISTRY_PATH}. Updated: {updated}")
+        PYEOF
+
+    # Step 6: Commit and push all changes to the rl-training repository.
+    # A single commit covers all files copied and the registry update.
+    - name: Commit and push to rl-training
+      if: steps.detect.outputs.skip == 'false'
+      working-directory: rl-repo
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add .
+        # Exit cleanly if there is nothing to commit (e.g. all files already existed).
+        if git diff --cached --quiet; then
+          echo "Nothing to commit. All strategies already present in rl-training."
+          exit 0
+        fi
+        git commit -m "auto-deploy: add strategies from PR #${{ github.event.pull_request.number }} (${{ github.event.pull_request.title }})"
+        git push

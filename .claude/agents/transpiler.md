@@ -43,6 +43,20 @@ NOT: min_bars = max_indicator_period + 1
 Example: A strategy with a 200-period EMA needs min_bars = 600.
 Use the 3× factor in the `len(close) < min_bars` guard at the top of `run()`.
 
+## CRITICAL RULE: No `np.roll()` for Time-Series Shifts
+NEVER use `np.roll()` to shift a time-series array. `np.roll` wraps the last element to
+index 0, introducing a silent lookahead artifact on the first bar that corrupts cumulative
+indicators (e.g., momentum accumulators, running totals).
+ALWAYS use:
+  - `pd.Series.diff()` for period-over-period differences
+  - `pd.Series.shift(n)` for lag shifts (n must be a positive integer)
+
+## CRITICAL RULE: File Naming — Use `safe_name`, Never Generic Names
+NEVER write a strategy file named `strategy.py` or a test file named `test_strategy.py`.
+The file name MUST be derived from the `safe_name` variable passed by the Orchestrator
+(e.g., `supertrend_strategy.py`).
+Pattern: `src/strategies/{safe_name}.py` and `tests/strategies/test_{safe_name}.py`.
+
 # Reporting
 After writing the strategy file, write a structured Markdown report to the path provided as "Output snapshot directory" in your prompt.
 
