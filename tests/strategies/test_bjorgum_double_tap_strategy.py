@@ -9,7 +9,7 @@ Test coverage:
   3. Signal type correctness — all returned values are valid SignalType members
   4. Full run without exceptions across all 1,100 candles
   5. Signal coverage — verify LONG, SHORT or FLAT/HOLD signals are produced
-  6. Pattern detection sanity — double-top produces SHORT, double-bottom LONG
+  6. Pattern detection — synthetic double top MUST produce strict SHORT signal
 """
 
 import pytest
@@ -18,7 +18,7 @@ import numpy as np
 from datetime import datetime, timezone
 
 from src.base_strategy import SignalType, StrategyRecommendation
-from src.strategies.bjorgum_double_tap import BjorgumDoubleTapStrategy
+from src.strategies.bjorgum_double_tap_strategy import BjorgumDoubleTapStrategy
 
 
 # ---------------------------------------------------------------------------
@@ -158,75 +158,122 @@ def test_bulk_run_produces_signals(sample_ohlcv_data):
 
 
 # ---------------------------------------------------------------------------
-# 6. Pattern detection sanity check (synthetic double top / bottom)
+# 6. Pattern detection — strict SHORT on verified synthetic double top
 # ---------------------------------------------------------------------------
 
-def _make_double_top_df(n_warmup: int = 130) -> pd.DataFrame:
-    """Craft a DataFrame containing a clear double top pattern.
+def _make_double_top_df() -> pd.DataFrame:
+    """Craft an OHLCV DataFrame that triggers a verified SHORT (double top) signal.
 
-    Structure (after warmup):
-        warmup ... flat at 1000 (n_warmup bars)
-        bar A: rally to 1100 (first top)
-        bar B: pull back to 1000 (neckline)
-        bar C: rally back to ~1100 (second top, within 5% of first)
-        bar D: close breaks below 1000 → neckline crossdown → SHORT signal
+    Uses len_=5 (short pivot window) to minimise bars required.
+    Each bar is engineered so that exactly the following pivot sequence fires
+    inside BjorgumDoubleTapStrategy._build_pivot_list:
+
+        idx 120 → p1 (low,  direction=0)  lbar=0, piv_low=400
+        idx 125 → p2 (high, direction=1)  hbar=0, piv_high=600
+        idx 130 → p3 (low,  direction=0)  lbar=0, piv_low=515  ← neckline y3
+        idx 135 → p4 (high, direction=1)  hbar=0, piv_high=595  ← second top
+        idx 137 → p5 (low,  direction=0)  lbar=0 (updated at 138 to piv_low=511)
+
+    At idx 138 (final bar):
+        close_prev = 516 >= y3=515   ✓
+        close_curr = 513 <  y3=515   ✓  → neckline cross-down → SHORT
+        |y4 - y2| = |595-600| = 5,  height = 82.5,  tol_band = 12.375  ✓
     """
-    dates = pd.date_range(
-        start=datetime(2024, 1, 1, tzinfo=timezone.utc),
-        periods=n_warmup + 60,
-        freq="4h",
-        tz="UTC",
-    )
-    close = np.full(n_warmup + 60, 1000.0)
+    N = 139  # bars 0-138
 
-    # Pivot length = 50 — build clear M-shape over 60 bars after warmup
-    # We space pivots so each is well within a 50-bar window
-    peak1 = n_warmup + 10
-    neck = n_warmup + 20
-    peak2 = n_warmup + 30
-    breakdown = n_warmup + 40
+    close = np.empty(N)
+    high  = np.empty(N)
+    low   = np.empty(N)
 
-    close[n_warmup:peak1] = np.linspace(1000, 1100, peak1 - n_warmup)
-    close[peak1:neck] = np.linspace(1100, 1000, neck - peak1)
-    close[neck:peak2] = np.linspace(1000, 1095, peak2 - neck)   # ~5% lower → within 15% tol
-    close[peak2:breakdown] = np.linspace(1095, 1000, breakdown - peak2)
-    # Bar `breakdown` closes just below neckline
-    close[breakdown] = 999.0
+    # ---- Warmup (bars 0-119): flat — no hbar/lbar ever fires ----
+    close[:120] = 500.0
+    high[:120]  = 505.0
+    low[:120]   = 495.0
+
+    # ---- Bar 120: p1 (lbar=0 with len_=5, window=[495,495,495,495,400]) ----
+    close[120] = 410.0;  high[120] = 415.0;  low[120] = 400.0
+
+    # ---- Bars 121-124: quiet descent — bar 120's high (415) stays window max,
+    #      so hbar never fires; bar 120's low (400) stays window min, lbar never fires ----
+    for k, i in enumerate(range(121, 125)):
+        close[i] = 412.0 - k * 2   # 412, 410, 408, 406
+        high[i]  = 414.0 - k * 2   # 414, 412, 410, 408  (all < 415)
+        low[i]   = 410.0 - k * 2   # 410, 408, 406, 404  (all > 400)
+
+    # ---- Bar 125: p2 (hbar=0, window high=[414,412,410,408,600]=600)
+    #      low=400 matches p1 low — shields bars 126-129 from spurious lbar ----
+    close[125] = 590.0;  high[125] = 600.0;  low[125] = 400.0
+
+    # ---- Bars 126-129: pullback from first top.
+    #      bar 125's low=400 keeps window min=400, so no lbar fires here ----
+    close[126] = 570.0;  high[126] = 572.0;  low[126] = 568.0
+    close[127] = 555.0;  high[127] = 557.0;  low[127] = 553.0
+    close[128] = 540.0;  high[128] = 542.0;  low[128] = 538.0
+    close[129] = 525.0;  high[129] = 527.0;  low[129] = 523.0
+
+    # ---- Bar 130: p3 neckline (lbar=0, window low=[568,553,538,523,515]=515) ----
+    close[130] = 520.0;  high[130] = 525.0;  low[130] = 515.0   # y3 = 515
+
+    # ---- Bars 131-134: quiet rise. bar 130's low (515) stays window min
+    #      while in window, preventing spurious lbar; highs stay below window max ----
+    close[131] = 520.0;  high[131] = 522.0;  low[131] = 518.0
+    close[132] = 520.0;  high[132] = 522.0;  low[132] = 520.0
+    close[133] = 520.0;  high[133] = 522.0;  low[133] = 522.0
+    close[134] = 520.0;  high[134] = 522.0;  low[134] = 524.0
+
+    # ---- Bar 135: p4 second top (hbar=0, window high=[522,522,522,522,595]=595)
+    #      |piv_high[135]-piv_high[125]| = |595-600| = 5 < tol_band=12.375 ✓ ----
+    close[135] = 590.0;  high[135] = 595.0;  low[135] = 585.0
+
+    # ---- Bar 136: descent, no pivot ----
+    close[136] = 560.0;  high[136] = 562.0;  low[136] = 558.0
+
+    # ---- Bar 137: lbar=0 (window low=[522,524,585,558,514]=514) → p5 appended.
+    #      close=516 >= neckline 515 (this is close_prev for the signal bar) ----
+    close[137] = 516.0;  high[137] = 519.0;  low[137] = 514.0
+
+    # ---- Bar 138: neckline cross-down.
+    #      lbar=0 again (window low=[524,585,558,514,511]=511) → p5 updated (still dir=0).
+    #      close_curr=513 < y3=515  AND  close_prev=516 >= y3=515  → SHORT ----
+    close[138] = 513.0;  high[138] = 516.0;  low[138] = 511.0
 
     open_ = np.roll(close, 1)
     open_[0] = close[0]
-    high = np.maximum(open_, close) + 5.0
-    low = np.minimum(open_, close) - 5.0
-    volume = np.full(len(close), 1000.0)
 
-    df = pd.DataFrame({
-        "date": dates[: len(close)],
-        "open": open_,
-        "high": high,
-        "low": low,
-        "close": close,
-        "volume": volume,
+    dates = pd.date_range(
+        start=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        periods=N,
+        freq="4h",
+        tz="UTC",
+    )
+
+    return pd.DataFrame({
+        "date":   dates,
+        "open":   open_,
+        "high":   high,
+        "low":    low,
+        "close":  close,
+        "volume": np.full(N, 1000.0),
     })
-    df["high"] = df[["open", "close", "high"]].max(axis=1)
-    df["low"] = df[["open", "close", "low"]].min(axis=1)
-    return df
 
 
-def test_double_top_produces_short_or_hold():
-    """Double top pattern results in SHORT signal or HOLD (data may not trigger
-    due to rolling window constraints with default len_=50).
+def test_double_top_produces_short():
+    """Synthetic double top MUST produce a strict SHORT signal.
 
-    This test validates the strategy does not raise errors on a crafted double-top
-    scenario and produces a valid signal.
+    The fixture data is engineered bar-by-bar to satisfy the exact mathematical
+    conditions of BjorgumDoubleTapStrategy (len_=5, tol=15%).  The assertion is
+    strict — HOLD is not acceptable.  If this test fails, the pivot detection or
+    neckline crossdown logic is broken.
     """
-    strategy = BjorgumDoubleTapStrategy()
-    df = _make_double_top_df(n_warmup=strategy.MIN_BARS + 10)
+    strategy = BjorgumDoubleTapStrategy(len_=5)
+    df = _make_double_top_df()
     ts = df["date"].iloc[-1].to_pydatetime()
 
     rec = strategy.run(df, ts)
-    assert rec.signal in VALID_SIGNALS
-    # The test passes whether or not the pattern fires — it validates no crash
-    print(f"\nDouble-top scenario signal: {rec.signal}")
+
+    assert rec.signal == SignalType.SHORT, (
+        f"Expected SignalType.SHORT for verified double top, got {rec.signal}"
+    )
 
 
 def test_returns_recommendation_with_correct_timestamp(sample_ohlcv_data):

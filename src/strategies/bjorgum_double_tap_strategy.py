@@ -88,6 +88,9 @@ class BjorgumDoubleTapStrategy(BaseStrategy):
         self.fib = fib
         self.atr_len = atr_len
         self.swing_lookback = swing_lookback
+        # Tracks the bar index of p3 (neckline pivot) for the last traded pattern.
+        # Mirrors Pine Script's `traded` flag to prevent re-signaling the same structure.
+        self._last_traded_p3_idx: int = -1
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -288,7 +291,7 @@ class BjorgumDoubleTapStrategy(BaseStrategy):
                     top_match = abs(y4 - y2) <= tol_band
                     # Neckline crossdown: close crosses below y3 on this bar
                     neck_cross_dn = close_curr < y3 and close_prev >= y3
-                    if top_match and neck_cross_dn:
+                    if top_match and neck_cross_dn and p3[0] != self._last_traded_p3_idx:
                         short_signal = True
 
         # Double Bottom: pivots alternate high-low-high-low (last direction = low=-1...
@@ -308,13 +311,15 @@ class BjorgumDoubleTapStrategy(BaseStrategy):
                     bottom_match = abs(y4 - y2) <= tol_band
                     # Neckline crossup: close crosses above y3 on this bar
                     neck_cross_up = close_curr > y3 and close_prev <= y3
-                    if bottom_match and neck_cross_up:
+                    if bottom_match and neck_cross_up and p3[0] != self._last_traded_p3_idx:
                         long_signal = True
 
         # ---- Emit signal (SHORT takes priority if both fire simultaneously) ---
         if short_signal:
+            self._last_traded_p3_idx = p3[0]
             return StrategyRecommendation(signal=SignalType.SHORT, timestamp=timestamp)
         if long_signal:
+            self._last_traded_p3_idx = p3[0]
             return StrategyRecommendation(signal=SignalType.LONG, timestamp=timestamp)
 
         return StrategyRecommendation(signal=SignalType.HOLD, timestamp=timestamp)
