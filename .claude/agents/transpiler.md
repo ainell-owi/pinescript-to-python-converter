@@ -54,6 +54,14 @@ ALWAYS use:
   - `pd.Series.diff()` for period-over-period differences
   - `pd.Series.shift(n)` for lag shifts (n must be a positive integer)
 
+## CRITICAL RULE: Use `talib.MA_Type` for Moving Average Types
+NEVER use raw integers (e.g., `0`, `1`) for moving average type arguments in `talib` functions
+(e.g., `STOCH`, `BBANDS`, `MACD`).
+- ALWAYS add: `from talib import MA_Type`
+- ALWAYS use the enum: `slowk_matype=MA_Type.SMA` instead of `slowk_matype=0`.
+- Common mappings: `0=SMA`, `1=EMA`, `2=WMA`, `3=DEMA`, `4=TEMA`.
+Raw integers cause `mypy` type errors and will fail CI.
+
 ## CRITICAL RULE: File Suffix Convention
 NEVER write a strategy file named `strategy.py` or a test file named `test_strategy.py`.
 - Strategy files MUST end with `_strategy.py` (Pattern: `src/strategies/{safe_name}_strategy.py`)
