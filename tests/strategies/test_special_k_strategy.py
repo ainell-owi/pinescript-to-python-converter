@@ -4,7 +4,7 @@ Tests for SpecialKStrategy (Special K Strategy).
 Covers:
 - Module import and class instantiation
 - Return type contract (StrategyRecommendation)
-- min_bars guard: HOLD on data shorter than MIN_BARS (1160 bars)
+- min_bars guard: HOLD on data shorter than MIN_CANDLES_REQUIRED (1160 bars)
 - HOLD on the full 1100-bar 15m fixture (not enough bars for 1D indicator)
 - Filters bypass: disabling zero-line and slope filters expands signal space
 - Timestamp passthrough
@@ -98,9 +98,9 @@ class TestSpecialKStrategyImportAndInstantiation:
         """Default constructor must succeed and expose expected properties."""
         strategy = SpecialKStrategy()
         assert strategy.name == "Special K Strategy"
-        assert strategy.timeframe == "1D"
+        assert strategy.timeframe == "1d"
         assert strategy.lookback_hours == 19776
-        assert strategy.MIN_BARS == 1160
+        assert strategy.MIN_CANDLES_REQUIRED == 1160
 
     def test_custom_instantiation(self):
         """Custom parameters must be stored correctly."""

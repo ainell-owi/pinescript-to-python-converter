@@ -100,7 +100,7 @@ class SpecialKStrategy(BaseStrategy):
         atr_len         : 14    (ATR length — computed but exits handled externally)
 
     Minimum bars required: 530 (longest ROC period) + 530 (longest SMA period)
-    + 100 (signal SMA) = 1160. We use 1160 as the conservative min_bars guard.
+    + 100 (signal SMA) = 1160. We use 1160 as the conservative MIN_CANDLES_REQUIRED guard.
     """
 
     def __init__(
