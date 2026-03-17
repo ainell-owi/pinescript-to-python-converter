@@ -650,7 +650,7 @@ def _setup_strategy_logger(strategy_name: str) -> tuple[logging.Logger, Path]:
                 instance and the Path object pointing to the newly created run directory.
         """
     ts       = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
-    safe     = strategy_name.replace(" ", "_").replace("/", "-")
+    safe     = "".join(c if c.isalnum() or c in "-_." else "_" for c in strategy_name).strip("_")
     run_dir  = LOGS_ROOT / safe / ts
     run_dir.mkdir(parents=True, exist_ok=True)
 
