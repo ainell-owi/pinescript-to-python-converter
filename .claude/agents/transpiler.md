@@ -55,7 +55,34 @@ ALWAYS use:
 NEVER write a strategy file named `strategy.py` or a test file named `test_strategy.py`.
 The file name MUST be derived from the `safe_name` variable passed by the Orchestrator
 (e.g., `supertrend_strategy.py`).
-Pattern: `src/strategies/{safe_name}.py` and `tests/strategies/test_{safe_name}.py`.
+Pattern: `src/strategies/{safe_name}.py` and `tests/strategies/{safe_name}_test.py`.
+
+Strategy files MUST end with `_strategy.py`. Test files MUST end with `_test.py`
+(suffix style, e.g., `supertrend_strategy_test.py` — NOT `test_supertrend_strategy.py`).
+
+## CRITICAL RULE: Dynamic Warmup Period (`MIN_CANDLES_REQUIRED`)
+NEVER define a static class-level `MIN_BARS` or `MIN_CANDLES_REQUIRED` constant.
+ALWAYS compute it dynamically inside `__init__` based on the strategy's actual parameters:
+
+```python
+def __init__(self, length: int = 14, atr_period: int = 10):
+    super().__init__(...)
+    self.length = length
+    self.atr_period = atr_period
+    self.MIN_CANDLES_REQUIRED = 3 * max(self.length, self.atr_period)
+```
+
+The guard at the top of `run()` MUST use `self.MIN_CANDLES_REQUIRED`, not a hardcoded literal:
+```python
+if len(df) < self.MIN_CANDLES_REQUIRED:
+    return StrategyRecommendation(signal=SignalType.HOLD, timestamp=timestamp)
+```
+
+## CRITICAL RULE: Lowercase Timeframes
+ALL timeframe strings MUST be strictly lowercase.
+Valid: `"1d"`, `"4h"`, `"1h"`, `"15m"`, `"5m"`, `"1m"`
+Invalid: `"1D"`, `"4H"`, `"15M"`, `"Daily"`, `"Hourly"`
+This applies to the `timeframe` argument in `super().__init__()` and any metadata strings.
 
 # Reporting
 After writing the strategy file, write a structured Markdown report to the path provided as "Output snapshot directory" in your prompt.

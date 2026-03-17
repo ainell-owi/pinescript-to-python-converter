@@ -47,6 +47,7 @@ class BaseStrategy(ABC):
         self._description = description
         self._timeframe = timeframe
         self._lookback_hours = lookback_hours
+        self.MIN_CANDLES_REQUIRED: int = 0
 
     # ---- getters (read-only) ----
 

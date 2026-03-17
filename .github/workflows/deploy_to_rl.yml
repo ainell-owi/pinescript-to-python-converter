@@ -67,7 +67,9 @@ jobs:
             echo "SKIP (already exists): $BASENAME"
           else
             cp "$FILE" "rl-repo/strategies/$BASENAME"
-            echo "Copied: $BASENAME"
+            # Fix import path: src.base_strategy → strategies.base_strategy
+            sed -i 's/from src\.base_strategy/from strategies.base_strategy/g' "rl-repo/strategies/$BASENAME"
+            echo "Copied and fixed imports: $BASENAME"
           fi
         done <<< "${{ steps.detect.outputs.new_files }}"
 
@@ -185,6 +187,16 @@ jobs:
 
         print(f"Registry written to {REGISTRY_PATH}. Updated: {updated}")
         PYEOF
+
+    # Step 5b: Register each new strategy in registry.py and config.py.
+    # Delegates to .github/scripts/register_strategies.py which performs
+    # idempotent insertions using bracket-depth counting.
+    # NEW_FILES_LIST is passed as an env var to avoid shell-injection risks.
+    - name: Register strategies in registry.py and config.py
+      if: steps.detect.outputs.skip == 'false'
+      env:
+        NEW_FILES_LIST: ${{ steps.detect.outputs.new_files }}
+      run: python .github/scripts/register_strategies.py
 
     # Step 6: Commit and push all changes to the rl-training repository.
     # A single commit covers all files copied and the registry update.
