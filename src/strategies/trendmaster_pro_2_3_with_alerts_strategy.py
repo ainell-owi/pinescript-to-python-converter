@@ -62,6 +62,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import talib
+from talib import MA_Type
 
 from src.base_strategy import BaseStrategy, SignalType, StrategyRecommendation
 
@@ -254,9 +255,9 @@ class TrendmasterPro23WithAlertsStrategy(BaseStrategy):
             close.values.astype(float),
             fastk_period=self.stoch_length,
             slowk_period=self.stoch_smoothing,
-            slowk_matype=0,  # SMA
+            slowk_matype=MA_Type.SMA,
             slowd_period=self.stoch_smoothing,
-            slowd_matype=0,  # SMA
+            slowd_matype=MA_Type.SMA,
         )
         stoch_k = pd.Series(stoch_k_arr, index=work.index)
         stoch_d = pd.Series(stoch_d_arr, index=work.index)
