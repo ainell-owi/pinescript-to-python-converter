@@ -38,8 +38,26 @@ output and ask the Orchestrator whether to abort.
 ## CRITICAL RULE: Dynamic Warmup Period (MIN_CANDLES_REQUIRED)
 Strategies MUST NOT define a static class-level `MIN_BARS` or `MIN_CANDLES_REQUIRED`.
 You MUST compute `self.MIN_CANDLES_REQUIRED` dynamically inside the `__init__` method based on input parameters to allow scaling during hyperparameter tuning.
-Example: `self.MIN_CANDLES_REQUIRED = 3 * max(self.length, self.atr_period)`
-The `run()` guard must use this instance variable: `if len(df) < self.MIN_CANDLES_REQUIRED:`
+
+### Warmup Guard Template (COPY THIS PATTERN EXACTLY)
+```python
+# In __init__: use 3× the LONGEST indicator period (accounts for EMA/RSI/ATR convergence)
+self.MIN_CANDLES_REQUIRED = 3 * max(self.ema_length, self.atr_period, self.rsi_length)
+
+# In run(): guard at the top
+if len(df) < self.MIN_CANDLES_REQUIRED:
+    return StrategyRecommendation(signal=SignalType.HOLD, timestamp=timestamp)
+```
+
+### WRONG — Validator will REJECT these patterns:
+```python
+self.MIN_CANDLES_REQUIRED = self.MA_LENGTH + 1        # WRONG: +1 is not enough for EMA convergence
+self.MIN_CANDLES_REQUIRED = max(self.EMA1, self.EMA2)  # WRONG: missing the 3× multiplier
+MIN_CANDLES_REQUIRED = 200                             # WRONG: static class-level constant
+self.MIN_CANDLES_REQUIRED = self.SLOW_PERIOD           # WRONG: must be 3 * max(all periods)
+```
+
+The 3× multiplier is mandatory because recursive indicators (EMA, RSI, ATR) need approximately 3× their period length to converge from seed values. Without it, early signals are unreliable.
 
 ## CRITICAL RULE: Lowercase Timeframes
 All timeframe strings passed to `super().__init__(timeframe=...)` MUST be strictly lowercase.

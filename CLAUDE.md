@@ -10,7 +10,7 @@ An AI-driven pipeline that converts TradingView Pine Script v5 strategies into v
 
 ```bash
 # Run the full pipeline (requires Claude CLI in PATH)
-python runner.py
+python main.py
 
 # Run tests (Linux/macOS)
 pytest tests/strategies/ -v
@@ -29,17 +29,19 @@ pytest tests/integrations/ -v
 
 ## Pipeline Flow
 
-`runner.py` is the single entry point. It orchestrates these phases:
+`main.py` is the single entry point. Pipeline logic is split into `src/pipeline/` modules. It orchestrates these phases:
 
-1. **Scrape** — If `input/` has fewer than 5 `.pine` files, `TradingViewScraper` (Selenium) auto-downloads public strategies from TradingView.
+1. **Scrape** — If `input/` has fewer than 6 `.pine` files, `TradingViewScraper` (Selenium) auto-downloads public strategies from TradingView.
 2. **Evaluate** — Spawns `claude -p --agent strategy_selector` as a subprocess for each new `.pine` file. Returns a JSON score (`btc_score` + `project_score`, each 0–5). Results are persisted to `strategies_registry.json`.
-3. **Select** — Displays a ranked CLI menu; user picks one strategy to convert.
+3. **Select** — Auto-selects the highest-scoring strategy. Increments `skip_count` for non-selected strategies (archived after 2 skips). Recycles from archive when no candidates remain.
 4. **Convert** — Spawns `claude -p --agent orchestrator` which delegates sequentially to four sub-agents:
-   - **Transpiler** → writes `src/strategies/<name>.py`
+   - **Transpiler** → writes `src/strategies/<name>_strategy.py`
    - **Validator** → static analysis (lookahead bias, forbidden functions, class contract)
-   - **Test Generator** → writes `tests/strategies/test_<name>.py`
+   - **Test Generator** → writes `tests/strategies/test_<name>.py` and runs pytest
    - **Integration** → git branch + GitHub MCP PR
-5. **Archive** — Low-scoring strategies (combined score < 4) are moved to `archive/`; higher-scoring ones remain in `input/` for future runs.
+5. **Archive** — Low-scoring strategies (combined score < 4) or stale strategies (skipped 2+ times) are moved to `archive/`.
+
+**Success detection:** `main.py` requires `INTEGRATION_PASS` or `INTEGRATION_FALLBACK` tokens in orchestrator stdout AND verifies artifact files exist on disk. Exit code 0 alone is not sufficient.
 
 Agent subprocesses use `--dangerously-skip-permissions` so tool-approval prompts don't block them. The `CLAUDECODE` env var is stripped so nested `claude` calls are allowed.
 
@@ -47,7 +49,9 @@ Agent subprocesses use `--dangerously-skip-permissions` so tool-approval prompts
 
 All agent definitions live in `.claude/agents/`. The orchestrator reads `.claude/skills/CONVERSION_FLOW/SKILL.md` as its master playbook.
 
-**Required logging protocol:** When the Orchestrator hands off to a sub-agent it must print `[SYSTEM] Handing over to: <AgentName>`. On return: `[SYSTEM] Control returned to: Orchestrator`. `runner.py` parses these strings to prefix log lines with the active agent name.
+**Required logging protocol:** When the Orchestrator hands off to a sub-agent it must print `[SYSTEM] Handing over to: <AgentName>`. On return: `[SYSTEM] Control returned to: Orchestrator`. `main.py` parses these strings to prefix log lines with the active agent name.
+
+**Orchestrator error handling:** The orchestrator runs in non-interactive mode (`-p`). It auto-fixes structural issues (warmup guards, imports, naming) with bounded retries (max 2 cycles). Trading logic failures abort immediately — no auto-fix.
 
 **Strategy Selector output contract:** Must be raw JSON only (no markdown fences). Schema: `{ pine_metadata, btc_score, project_score, recommendation_reason }`.
 
@@ -88,8 +92,8 @@ Implement in pure Pandas when TA-Lib lacks them:
 
 ## Strategy Naming Convention
 
-`runner.py`'s `safe_name()` converts the Pine filename to snake_case for the Python module name (e.g., `My-Strategy.pine` → `my_strategy`). Generated files follow this pattern:
-- `src/strategies/<safe_name>.py`
+The pipeline's `safe_name()` converts the Pine filename to snake_case for the Python module name (e.g., `My-Strategy.pine` → `my_strategy`). Generated files follow this pattern:
+- `src/strategies/<safe_name>_strategy.py`
 - `tests/strategies/test_<safe_name>.py`
 
 ## Registry State Machine
@@ -101,7 +105,7 @@ new → evaluated → selected → converted → archived
                            ↘ failed (retry via menu)
 ```
 
-Each entry stores the file path, scores (`btc_score`, `project_score`), `recommendation_reason`, and current `status`.
+Each entry stores the file path, scores (`btc_score`, `project_score`), `recommendation_reason`, `skip_count`, and current `status`. Strategies are archived after 2 skips regardless of score.
 
 ## Test Fixture
 
@@ -118,7 +122,8 @@ All generated strategy tests must use this fixture. The warmup phase ensures `mi
 
 | File | Purpose |
 |---|---|
-| `runner.py` | Pipeline entry point |
+| `main.py` | Pipeline entry point (replaces old `runner.py`) |
+| `src/pipeline/` | Pipeline modules: `registry.py`, `evaluator.py`, `selector.py`, `orchestrator.py`, `archiver.py`, `scraper.py` |
 | `strategies_registry.json` | State tracker for all `.pine` files (new → evaluated → selected → converted → archived) |
 | `src/base_strategy.py` | Abstract base class all strategies must inherit |
 | `src/utils/resampling.py` | MTF utilities (`resample_to_interval`, `resampled_merge`) |
@@ -147,7 +152,7 @@ Each conversion run writes agent decision logs to `output/<safe_name>/<timestamp
 - `agent_test_generator.md` — test design decisions
 - `agent_integration.md` — branch name, PR URL, pass/fallback status
 
-The Integration Agent must output exactly `INTEGRATION_PASS` or `INTEGRATION_FALLBACK` so `runner.py` can parse the result.
+The Integration Agent must output exactly `INTEGRATION_PASS` or `INTEGRATION_FALLBACK` so `main.py` can parse the result. Without one of these tokens, the pipeline treats the run as a failure regardless of exit code.
 
 ## `/convert` Slash Command
 
@@ -155,4 +160,4 @@ Drop a `.pine` file in `input/` then run:
 ```
 /convert input/MyStrategy.pine
 ```
-This invokes the orchestrator sub-agent directly, skipping the evaluation/selection phases of `runner.py`.
+This invokes the orchestrator sub-agent directly, skipping the evaluation/selection phases of `main.py`.

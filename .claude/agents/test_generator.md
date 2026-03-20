@@ -48,8 +48,42 @@ def test_indicators_generated(sample_ohlcv_data):
     # assert 'sma_50' in sample_ohlcv_data.columns
 ```
 
+# Post-Write Execution (MANDATORY)
+
+After writing the test file, you MUST run the tests to verify they pass:
+
+```bash
+.venv/Scripts/python.exe -m pytest tests/strategies/test_<name>.py -v
+```
+
+## Failure Triage (2-step process)
+
+**Step 1 — Is the TEST itself wrong?**
+Test-level issues you should fix (max 2 fix-and-rerun attempts):
+- Wrong import path or class name typo
+- Wrong column name in assertion
+- Missing `sample_ohlcv_data` fixture usage
+- Assertion on indicator column that uses a different naming convention
+
+Fix the test file, rerun pytest, and continue.
+
+**Step 2 — Is the STRATEGY code wrong?**
+If the test is correctly written but the strategy produces:
+- Runtime errors (`AttributeError`, `TypeError`, `KeyError`, `IndexError`)
+- NaN-only signals (strategy never produces `LONG`/`SHORT` across all data phases)
+- Exception during indicator computation (e.g., talib input shape mismatch)
+
+**Do NOT weaken or remove the test to hide the problem.**
+Report: `TEST_VALID_STRATEGY_BROKEN: <one-line traceback summary>`
+The Orchestrator will route back to the Transpiler to fix the strategy code.
+
+## Success Criteria
+- All tests PASS → report `SUCCESS` with the pytest output summary
+- Tests fixed and PASS after ≤2 attempts → report `SUCCESS`
+- Strategy code is broken → report `TEST_VALID_STRATEGY_BROKEN: <details>`
+
 # Reporting
-After writing the test file, write a structured Markdown report to the path provided as "Output snapshot directory" in your prompt.
+After test execution, write a structured Markdown report to the path provided as "Output snapshot directory" in your prompt.
 
 File: `{output_snapshot}/agent_test_generator.md`
 
@@ -59,5 +93,7 @@ Report template:
 ### Tests written
 | Test name | Purpose |
 |---|---|
+### Pytest execution result
+<paste pytest -v output summary here>
 ### Coverage gaps noted
 ```

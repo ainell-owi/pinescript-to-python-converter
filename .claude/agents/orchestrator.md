@@ -37,12 +37,48 @@ When instructing the Transpiler Agent to generate a strategy file, you MUST expl
      After completing your task, write your full decision log to: <output_snapshot>/agent_<yourname>.md
      ```
 
-3. **Error Handling (Fail-Fast):**
-   - If ANY agent reports a FAILURE or ERROR:
-     1. **STOP** the workflow immediately.
-     2. Report the specific error to the user.
-     3. Ask for instructions (e.g., "The Validator found a lookahead bias. How should we proceed?").
-   - Do NOT attempt to auto-fix unless explicitly instructed by the sub-agent's output.
+3. **Error Handling (Auto-Fix with Bounded Retry):**
+
+   You run in non-interactive mode (`-p`). There is no user to ask for guidance.
+   Instead, apply bounded auto-fix for **structural issues only**.
+
+   **STRUCTURAL issues (safe to auto-fix, max 2 retry cycles):**
+   - Warmup guard formula (e.g., `period + 1` → `3 * max(...)`)
+   - Missing or wrong imports
+   - File naming conventions (`_strategy.py` suffix)
+   - `MA_Type` enum usage (raw int → `talib.MA_Type.SMA`)
+   - `np.roll()` → `pd.Series.shift()` replacement
+
+   **TRADING LOGIC issues (NEVER auto-fix — abort immediately):**
+   - Entry/exit signal conditions
+   - Indicator parameters or thresholds
+   - Signal priority or combination logic
+   - Multi-timeframe indicator computation order
+   - Lookahead bias in signal logic
+   - Incorrect PineScript translation
+   - Fake state (position proxies)
+
+   **Retry rules:**
+   - If the **Validator** reports a STRUCTURAL failure:
+     1. Parse exact issues from the Validator's report.
+     2. Re-invoke the **Transpiler** with explicit fix instructions (structural only).
+     3. Re-invoke the **Validator** on the fixed file.
+     4. Maximum 2 retry cycles. After 2 failures:
+        print `CONVERSION_FAILED: Structural issues unresolved after 2 retries` and STOP.
+   - If the **Validator** reports a TRADING LOGIC failure:
+     1. Print `CONVERSION_FAILED: Trading logic issue requires human review — <details>`
+     2. STOP immediately. Do NOT retry.
+   - If the **Transpiler** fails:
+     1. Retry once with error details in the prompt.
+     2. If still fails: print `CONVERSION_FAILED: Transpiler failed after retry` and STOP.
+   - If the **Test Generator** reports `TEST_VALID_STRATEGY_BROKEN`:
+     1. Route BACK to Transpiler with the traceback and fix instruction.
+     2. Re-run Validator on the fixed strategy.
+     3. Re-run Test Generator.
+     4. Maximum 1 full loop (Transpiler → Validator → Test Generator).
+        If it fails again: print `CONVERSION_FAILED: Strategy code broken after retry` and STOP.
+   - If the **Integration Agent** fails:
+     1. Output `INTEGRATION_FALLBACK` (no retry).
 
 4. **Report File Verification (Anti-Laziness Gate):**
    A sub-agent's response is only accepted as "SUCCESS" when it **explicitly states the
@@ -61,7 +97,7 @@ When the user provides a PineScript file (or asks to process `input/source_strat
 
 ## Pre-condition (Phase 0 already complete)
 The strategy has been evaluated and explicitly selected by the user BEFORE
-this agent is invoked. `runner.py` ran the Strategy Selector Agent for each
+this agent is invoked. `main.py` ran the Strategy Selector Agent for each
 candidate file and collected the user's choice.
 
 The prompt will contain:
