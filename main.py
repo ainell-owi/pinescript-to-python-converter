@@ -25,6 +25,7 @@ from src.pipeline import (
     _EXCLUDED_PINE_FILES,
 )
 from src.pipeline.archiver import archive_remaining
+from src.pipeline.category_counts import increment_category_count
 from src.pipeline.evaluator import run_evaluations
 from src.pipeline.orchestrator import copy_artifacts, run_orchestrator, verify_artifacts
 from src.pipeline.registry import _now_iso, load_registry, save_registry, scan_and_register
@@ -132,6 +133,7 @@ def main() -> None:
             "output_dir":   str(out_dir),
             "file_path":    new_file_path,
         })
+        increment_category_count(registry[chosen_key].get("category"))
         save_registry(registry)
         print(f"\n  Conversion complete!")
         print(f"    Artifacts → {out_dir}")

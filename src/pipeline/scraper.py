@@ -24,6 +24,7 @@ def _load_seen_urls() -> set[str]:
 
 def _save_seen_urls(seen_urls: set[str]) -> None:
     """Persist the global URL dedup store back to disk."""
+    SEEN_URLS_PATH.parent.mkdir(parents=True, exist_ok=True)
     SEEN_URLS_PATH.write_text(json.dumps(sorted(seen_urls), indent=2), encoding="utf-8")
 
 
@@ -31,7 +32,7 @@ def run_tv_scraper(max_results: int = 6) -> None:
     """
     Populate input/ by scraping public TradingView strategies.
 
-    Fetches from Popular + Editor's Picks, using seen_urls.json for dedup.
+    Fetches from Popular + Editor's Picks, using data/seen_urls.json for dedup.
     """
     print(f"\n[SCRAPER] input/ has fewer than {TARGET_STRATEGY_COUNT} strategies.")
     print(f"          Fetching {max_results} more strategy file(s) from TradingView...")

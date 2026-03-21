@@ -323,7 +323,7 @@ class TradingViewScraper:
             "    Chrome DevTools, find the copy button, and update\n"
             "    _COPY_BTN_XPATHS at the top of tv_scraper.py.\n\n"
             "  • Manual fallback: paste PineScript into input/source_strategy.pine\n"
-            "    and run runner.py directly."
+            "    and run main.py directly."
         )
 
     def save_to_input(

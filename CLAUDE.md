@@ -32,7 +32,7 @@ pytest tests/integrations/ -v
 `main.py` is the single entry point. Pipeline logic is split into `src/pipeline/` modules. It orchestrates these phases:
 
 1. **Scrape** — If `input/` has fewer than 6 `.pine` files, `TradingViewScraper` (Selenium) auto-downloads public strategies from TradingView.
-2. **Evaluate** — Spawns `claude -p --agent strategy_selector` as a subprocess for each new `.pine` file. Returns a JSON score (`btc_score` + `project_score`, each 0–5). Results are persisted to `strategies_registry.json`.
+2. **Evaluate** — Spawns `claude -p --agent strategy_selector` as a subprocess for each new `.pine` file. Returns JSON metadata including `category`, `btc_score`, and `project_score` (0–5 each score). Results are persisted to `data/strategies_registry.json`, and category saturation is tracked in `data/category_counts.json`.
 3. **Select** — Auto-selects the highest-scoring strategy. Increments `skip_count` for non-selected strategies (archived after 2 skips). Recycles from archive when no candidates remain.
 4. **Convert** — Spawns `claude -p --agent orchestrator` which delegates sequentially to four sub-agents:
    - **Transpiler** → writes `src/strategies/<name>_strategy.py`
@@ -53,7 +53,8 @@ All agent definitions live in `.claude/agents/`. The orchestrator reads `.claude
 
 **Orchestrator error handling:** The orchestrator runs in non-interactive mode (`-p`). It auto-fixes structural issues (warmup guards, imports, naming) with bounded retries (max 2 cycles). Trading logic failures abort immediately — no auto-fix.
 
-**Strategy Selector output contract:** Must be raw JSON only (no markdown fences). Schema: `{ pine_metadata, btc_score, project_score, recommendation_reason }`.
+**Strategy Selector output contract:** Must be raw JSON only (no markdown fences). Schema: `{ pine_metadata, category, btc_score, project_score, recommendation_reason }`.
+The selector must reject long-only/short-only strategies, excessive warmups above 1000 bars, trade-management-driven systems without real entry logic, heavy `O(N^2)` scans, and oversaturated categories.
 
 ## Strategy Contract (`BaseStrategy`)
 
@@ -98,14 +99,14 @@ The pipeline's `safe_name()` converts the Pine filename to snake_case for the Py
 
 ## Registry State Machine
 
-`strategies_registry.json` tracks each `.pine` file through these lifecycle states:
+`data/strategies_registry.json` tracks each `.pine` file through these lifecycle states:
 
 ```
 new → evaluated → selected → converted → archived
                            ↘ failed (retry via menu)
 ```
 
-Each entry stores the file path, scores (`btc_score`, `project_score`), `recommendation_reason`, `skip_count`, and current `status`. Strategies are archived after 2 skips regardless of score.
+Each entry stores the file path, category, scores (`btc_score`, `project_score`), `recommendation_reason`, `skip_count`, and current `status`. Strategies are archived after 2 skips regardless of score.
 
 ## Test Fixture
 
@@ -124,7 +125,8 @@ All generated strategy tests must use this fixture. The warmup phase ensures `mi
 |---|---|
 | `main.py` | Pipeline entry point (replaces old `runner.py`) |
 | `src/pipeline/` | Pipeline modules: `registry.py`, `evaluator.py`, `selector.py`, `orchestrator.py`, `archiver.py`, `scraper.py` |
-| `strategies_registry.json` | State tracker for all `.pine` files (new → evaluated → selected → converted → archived) |
+| `data/strategies_registry.json` | State tracker for all `.pine` files (new → evaluated → selected → converted → archived) |
+| `data/category_counts.json` | Running counts of accepted strategy categories used to penalize overrepresented categories |
 | `src/base_strategy.py` | Abstract base class all strategies must inherit |
 | `src/utils/resampling.py` | MTF utilities (`resample_to_interval`, `resampled_merge`) |
 | `src/utils/timeframes.py` | Timeframe helpers: `timeframe_to_minutes`, `timeframe_to_cron`, candle arithmetic |
@@ -141,7 +143,7 @@ All generated strategy tests must use this fixture. The warmup phase ensures `mi
 | `output/<safe_name>/<timestamp>/` | Per-run conversion snapshot: `strategy.py`, `test_strategy.py`, `run.log`, agent decision logs |
 | `logs/<strategy_name>/<timestamp>/` | Orchestrator process logs: `run.log` (DEBUG) and `errors.log` (ERROR only) |
 | `archive/` | Low-scoring `.pine` files moved here after a run (combined score < 4) |
-| `seen_urls.json` | Persisted set of scraped TradingView URLs — prevents re-downloading across runs |
+| `data/seen_urls.json` | Persisted set of scraped TradingView URLs — prevents re-downloading across runs |
 
 ## Agent Decision Logs (Output Snapshot)
 

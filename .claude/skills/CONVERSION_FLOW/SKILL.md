@@ -4,7 +4,7 @@ This document defines the step-by-step execution flow for the Orchestrator Agent
 
 ## Phase 0: Strategy Selection (Pre-flight — handled by main.py)
 - `main.py` scans `input/` and registers all .pine files in
-  `strategies_registry.json`.
+  `data/strategies_registry.json`.
 - Each new file is evaluated **in isolation** by the `strategy_selector` agent,
   which returns a JSON object with BTC + project scores.
 - The pipeline auto-selects the highest-scoring strategy.
@@ -38,6 +38,7 @@ The Orchestrator is only invoked AFTER this step and starts at Phase 1.
 ## Phase 4: Delivery (GitHub Integration)
 5. **Action:** Call **Integration Agent**.
    - Task: Push code and **Open Pull Request** using GitHub MCP.
+   - PR body must be real multiline Markdown with actual newline characters, never literal `\n` escape text.
    - **Goal:** Prepare the code for human review.
    - **Must emit:** `INTEGRATION_PASS` or `INTEGRATION_FALLBACK` token.
 

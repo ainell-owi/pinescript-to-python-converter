@@ -1,5 +1,5 @@
 """
-Registry — CRUD operations for strategies_registry.json.
+Registry — CRUD operations for data/strategies_registry.json.
 
 Lifecycle: new → evaluated → selected → converted → archived
                                       ↘ failed (retry via menu)
@@ -34,6 +34,7 @@ def load_registry() -> dict:
 
 def save_registry(registry: dict) -> None:
     """Atomic write: temp file then rename to avoid corruption on crash."""
+    REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
     tmp = REGISTRY_PATH.with_suffix(".tmp")
     tmp.write_text(json.dumps(registry, indent=2, ensure_ascii=False), encoding="utf-8")
     tmp.replace(REGISTRY_PATH)

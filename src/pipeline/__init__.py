@@ -10,12 +10,14 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-REGISTRY_PATH           = Path("strategies_registry.json")
+DATA_DIR                = Path("data")
+REGISTRY_PATH           = DATA_DIR / "strategies_registry.json"
+CATEGORY_COUNTS_PATH    = DATA_DIR / "category_counts.json"
 INPUT_DIR               = Path("input")
 ARCHIVE_DIR             = Path("archive")
 OUTPUT_DIR              = Path("output")
 LOGS_ROOT               = Path("logs")
-SEEN_URLS_PATH          = Path("seen_urls.json")
+SEEN_URLS_PATH          = DATA_DIR / "seen_urls.json"
 ARCHIVE_SCORE_THRESHOLD = 4     # btc + proj < this → archive; >= this → keep
 TARGET_STRATEGY_COUNT   = 6     # minimum .pine files to keep in input/
 MAX_SEARCH_LOOPS        = 5     # retry cap for auto-selection before giving up

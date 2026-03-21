@@ -77,7 +77,7 @@
     "pine_metadata": {
       "name": "Special K Strategy",
       "safe_name": "special_k_strategy",
-      "timeframe": "1D",
+      "timeframe": "1d",
       "lookback_bars": 824
     },
     "btc_score": 3,
@@ -96,7 +96,7 @@
     "pine_metadata": {
       "name": "TASC 2026.03 One Percent A Week",
       "safe_name": "tasc_2026_03_one_percent_a_week",
-      "timeframe": "1D",
+      "timeframe": "1d",
       "lookback_bars": 10
     },
     "btc_score": 1,
@@ -148,7 +148,7 @@
     "pine_metadata": {
       "name": "Rudy Breakout Momentum v2",
       "safe_name": "rudy_breakout_momentum_v2",
-      "timeframe": "1D",
+      "timeframe": "1d",
       "lookback_bars": 126
     },
     "btc_score": 2,

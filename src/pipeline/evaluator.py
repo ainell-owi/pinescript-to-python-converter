@@ -14,6 +14,33 @@ from src.pipeline.registry import _now_iso, save_registry
 logger = logging.getLogger("runner")
 
 
+def _normalize_timeframe(value: str | None) -> str:
+    """Normalize selector timeframe output to the lowercase forms used downstream."""
+    if not value:
+        return "1h"
+
+    cleaned = str(value).strip()
+    mapping = {
+        "1": "1m",
+        "3": "3m",
+        "5": "5m",
+        "15": "15m",
+        "30": "30m",
+        "60": "1h",
+        "120": "2h",
+        "240": "4h",
+        "D": "1d",
+        "1D": "1d",
+        "d": "1d",
+        "1d": "1d",
+        "H": "1h",
+        "1H": "1h",
+        "h": "1h",
+        "1h": "1h",
+    }
+    return mapping.get(cleaned, cleaned.lower())
+
+
 def _parse_json_from_output(raw: str) -> dict:
     """
     Defensively parse a JSON object from raw LLM text output.
@@ -48,7 +75,8 @@ def evaluate_strategy(pine_file: Path) -> dict | None:
         f"{raw}\n\n"
         "Output ONLY a raw JSON object matching this exact schema — no markdown, no extra fields:\n"
         '{"pine_metadata": {"name": "...", "safe_name": "...", "timeframe": "...", "lookback_bars": 0}, '
-        '"btc_score": 0, "project_score": 0, "recommendation_reason": "..."}'
+        '"category": "Trend", "btc_score": 0, "project_score": 0, '
+        '"recommendation_reason": "..."}'
     )
     command = [
         "claude", "-p",
@@ -148,24 +176,25 @@ def run_evaluations(registry: dict) -> dict:
         print(f"    {key} ... ", end="", flush=True)
         result = evaluate_strategy(Path(rec["file_path"]))
 
-        required = {"pine_metadata", "btc_score", "project_score"}
+        required = {"pine_metadata", "category", "btc_score", "project_score"}
         if result and required.issubset(result):
             btc  = result["btc_score"]
             proj = result["project_score"]
             meta = result["pine_metadata"]
+            category = result["category"]
             if not meta.get("safe_name"):
                 raw_name = meta.get("name", key.replace(".pine", ""))
                 meta["safe_name"] = "".join(
                     c if c.isalnum() else "_" for c in raw_name
                 ).strip("_")
-            if not meta.get("timeframe"):
-                meta["timeframe"] = "1h"
+            meta["timeframe"] = _normalize_timeframe(meta.get("timeframe"))
             if not meta.get("lookback_bars"):
                 meta["lookback_bars"] = 100
             registry[key].update({
                 "status":                "evaluated",
                 "evaluated_at":          _now_iso(),
                 "pine_metadata":         meta,
+                "category":              category,
                 "btc_score":             btc,
                 "project_score":         proj,
                 "recommendation_reason": result.get("recommendation_reason", ""),
@@ -178,6 +207,7 @@ def run_evaluations(registry: dict) -> dict:
                 "pine_metadata":         {
                     "name": key, "safe_name": "", "timeframe": "?", "lookback_bars": 0
                 },
+                "category":              "Other",
                 "btc_score":             0,
                 "project_score":         0,
                 "recommendation_reason": "Evaluation failed — scored 0.",

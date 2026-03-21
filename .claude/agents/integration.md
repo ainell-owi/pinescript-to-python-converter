@@ -28,7 +28,13 @@ Call the `mcp__github__create_pull_request` MCP tool with:
 - `title`: `feat: Add <StrategyName> Strategy`
 - `head`: `feat/<strategy_name_snake_case>`
 - `base`: `main`
-- `body`: formatted as below
+- `body`: formatted as below, using REAL multiline Markdown
+
+Critical formatting rule for `body`:
+- Pass actual newline characters in the MCP tool argument.
+- Do NOT send the literal two-character sequence `\n` as a line break.
+- Do NOT JSON-escape the markdown body yourself.
+- Build the PR description as normal multiline text so GitHub renders headings, bullets, and tables correctly.
 
 The body MUST follow this structured format:
 
@@ -72,6 +78,9 @@ The body MUST follow this structured format:
 
 **Action Required:** Please perform a Code Review and approve for merge.
 ---
+
+Before declaring success, verify the created PR description renders with actual line breaks on GitHub.
+If the PR body shows literal `\n` text, treat that as a formatting failure and fix/recreate the body before emitting `INTEGRATION_PASS`.
 
 ## 4. Handover
 - Output the direct PR link.
