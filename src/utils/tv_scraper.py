@@ -39,6 +39,158 @@ from webdriver_manager.chrome import ChromeDriverManager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("TV_Scraper")
 
+# ── Strategy Report / Description tab selectors ───────────────────────────────
+
+# XPath candidates for the "Description" tab on a strategy page.
+_DESCRIPTION_TAB_XPATHS = [
+    "//*[@role='tab'][normalize-space(.)='Description']",
+    "//*[normalize-space(.)='Description' and (self::button or self::a or self::span or self::div)]",
+    "//*[normalize-space(.)='Description']",
+]
+
+# XPath candidates for the "Strategy report" / "Strategy Tester" tab.
+# Priority order: exact label seen in the TradingView UI image (lowercase 'r'),
+# then legacy capitalisation variants, then broad element-type fallbacks.
+_STRATEGY_TESTER_TAB_XPATHS = [
+    "//*[@role='tab'][normalize-space(.)='Strategy report']",
+    "//*[@role='tab'][normalize-space(.)='Strategy Tester']",
+    "//*[@role='tab'][normalize-space(.)='Strategy Report']",
+    "//*[normalize-space(.)='Strategy report' and (self::button or self::a or self::span or self::div)]",
+    "//*[normalize-space(.)='Strategy Tester' and (self::button or self::a or self::span or self::div)]",
+    "//*[normalize-space(.)='Strategy Report' and (self::button or self::a or self::span or self::div)]",
+]
+
+# XPath used for a fast existence probe (3 s) to distinguish strategies from
+# indicators before attempting the full Strategy Report extraction.
+_STRATEGY_TAB_PROBE_XPATH = (
+    "//*[@role='tab' and ("
+    "normalize-space(.)='Strategy report' or "
+    "normalize-space(.)='Strategy Tester' or "
+    "normalize-space(.)='Strategy Report'"
+    ")]"
+)
+
+# XPath candidates for the "Overview" / "Equity curve" sub-tab that appears
+# inside the Strategy Report panel after the tab is clicked.  Presence of any
+# of these confirms the panel has fully rendered.
+_EQUITY_SUBTAB_XPATHS = [
+    "//*[normalize-space(.)='Equity chart']",
+    "//*[normalize-space(.)='Performance']",
+    "//*[normalize-space(.)='Trades analysis']",
+]
+
+# CSS selectors for the description body text inside the description panel.
+_DESCRIPTION_BODY_SELECTORS = [
+    "[class*='description'] [class*='body']",
+    "[class*='Description'] [class*='Body']",
+    "[class*='description-body']",
+    "[class*='scriptDescription']",
+    "[class*='script-description']",
+    "[data-name='description']",
+]
+
+# Label texts used to locate KPI cells in the Strategy Report overview table.
+# All entries are stored in lowercase; the JS snippet matches case-insensitively
+# so capitalisation differences across TradingView UI versions are handled.
+_KPI_LABEL_MAP = {
+    "total_trades":     ["total trades", "кількість угод"],
+    "profit_factor":    ["profit factor", "фактор прибутку"],
+    "max_drawdown_pct": ["max equity drawdown", "max drawdown", "макс. просадка"],
+    "sharpe_ratio":     ["sharpe ratio"],
+}
+
+# JS snippet: case-insensitive label scan — returns the adjacent value cell text.
+# arguments[0] is the lowercase candidate label string.
+_JS_KPI_BY_LABEL = """
+(function(labelText) {
+    var needle = labelText.toLowerCase();
+    var els = document.querySelectorAll('*');
+    for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (el.children.length === 0 && el.textContent.trim().toLowerCase() === needle) {
+            var parent = el.parentElement;
+            if (!parent) continue;
+            var siblings = parent.parentElement ? parent.parentElement.children : [];
+            for (var j = 0; j < siblings.length; j++) {
+                if (siblings[j] !== parent) {
+                    var val = siblings[j].textContent.trim();
+                    if (val) return val;
+                }
+            }
+            // Fallback: next sibling of the label element itself
+            var next = el.nextElementSibling;
+            if (next) return next.textContent.trim();
+        }
+    }
+    return null;
+})(arguments[0]);
+"""
+
+# ── Metric parsing utility ────────────────────────────────────────────────────
+
+# Regex to extract the first signed numeric token from a cleaned string.
+_NUMERIC_RE = re.compile(r"[-+]?\d*\.\d+|\d+")
+
+# Unicode minus variants displayed by TradingView (en-dash, em-dash, minus sign).
+_UNICODE_DASHES = str.maketrans({
+    "\u2013": "-",  # en-dash  –
+    "\u2014": "-",  # em-dash  —
+    "\u2212": "-",  # minus    −
+})
+
+
+def _parse_metric_to_float(raw_str: Optional[str]) -> Optional[float]:
+    """
+    Robustly convert a TradingView KPI string to a float.
+
+    Handles:
+    - Unicode dash variants (–, —, −) → ASCII hyphen
+    - Thousands commas ("1,200.5" → 1200.5)
+    - Percentage signs ("−10.5%" → -10.5)
+    - Currency symbols ("$1.5" → 1.5)
+    - Parenthesis negation ("(5.3)" → -5.3)
+    - "K" suffix ("1.5K" → 1500.0)
+
+    Returns None if the input is empty, None, or contains no parseable number.
+    """
+    if not raw_str:
+        return None
+
+    s = raw_str.translate(_UNICODE_DASHES).strip()
+
+    # Convert parenthesis notation "(x)" → "-x" before stripping other chars.
+    negative_parens = s.startswith("(") and s.endswith(")")
+    s = s.replace("(", "").replace(")", "")
+    if negative_parens and not s.startswith("-"):
+        s = "-" + s
+
+    # Strip visual noise characters.
+    s = s.replace("%", "").replace("$", "").replace(",", "").strip()
+
+    k_suffix = s.upper().endswith("K")
+    if k_suffix:
+        s = s[:-1].strip()
+
+    match = _NUMERIC_RE.search(s)
+    if not match:
+        return None
+
+    # The regex [-+]?\d*\.\d+|\d+ captures the sign when it is directly
+    # adjacent to the digits.  The guard below handles the rare case where
+    # a space separates the minus from the digits (e.g. "- 10.5") so the
+    # sign is preserved even if the regex matched only the numeric part.
+    if s.lstrip().startswith("-") and not match.group().startswith("-"):
+        signed_str = "-" + match.group()
+    else:
+        signed_str = match.group()
+
+    try:
+        value = float(signed_str)
+        return value * 1000.0 if k_suffix else value
+    except ValueError:
+        return None
+
+
 # ── Listing page constants ─────────────────────────────────────────────────────
 STRATEGIES_LISTING_URL = "https://www.tradingview.com/scripts/?script_type=strategies"
 EDITORS_PICKS_URL      = "https://www.tradingview.com/scripts/editors-picks/?script_type=strategies"
@@ -326,12 +478,62 @@ class TradingViewScraper:
             "    and run main.py directly."
         )
 
+    def fetch_strategy_metadata(self, strategy_url: str) -> dict:
+        """
+        Best-effort extraction of the author's description and Strategy Report
+        KPIs (Total Trades, Profit Factor, Max Drawdown %, Sharpe Ratio).
+
+        Assumes the driver is already on the strategy page (called after
+        fetch_pinescript).  If the driver is not initialised, starts it and
+        navigates to the URL.
+
+        Returns a dict:
+            {
+                "url": str,
+                "description": str | None,
+                "backtest_metrics": {
+                    "total_trades":     int | None,
+                    "profit_factor":    float | None,
+                    "max_drawdown_pct": float | None,
+                    "sharpe_ratio":     float | None,
+                },
+            }
+        All inner values default to None; extraction errors are logged as
+        warnings and never propagate to the caller.
+        """
+        result: dict = {
+            "url": strategy_url,
+            "description": None,
+            "backtest_metrics": {
+                "total_trades":     None,
+                "profit_factor":    None,
+                "max_drawdown_pct": None,
+                "sharpe_ratio":     None,
+            },
+        }
+
+        if not self.driver:
+            self.start_driver()
+            try:
+                self.driver.get(strategy_url)
+                WebDriverWait(self.driver, _WAIT_TIMEOUT).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
+                )
+            except Exception as exc:
+                logger.warning(f"[META] Could not navigate to {strategy_url}: {exc}")
+                return result
+
+        result["description"]     = self._extract_description_text()
+        result["backtest_metrics"] = self._extract_strategy_report_metrics()
+        return result
+
     def save_to_input(
         self,
         pine_source: str,
         strategy_url: str,
         input_dir: str = _PROJECT_INPUT_DIR,
         source: str = "",
+        metadata: Optional[dict] = None,
     ) -> Path:
         """Save PineScript to input/{strategy_slug}.pine.
 
@@ -374,7 +576,287 @@ class TradingViewScraper:
         content_to_write = f"// SOURCE: {source}\n{pine_source}" if source else pine_source
         output_path.write_text(content_to_write, encoding="utf-8")
         logger.info(f"Saved: {output_path}")
+
+        # 3. Persist sidecar metadata when provided.
+        if metadata is not None:
+            sidecar_path = output_path.with_suffix(".meta.json")
+            try:
+                sidecar_path.write_text(
+                    json.dumps(metadata, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                logger.info(f"Saved metadata sidecar: {sidecar_path}")
+            except Exception as exc:
+                logger.warning(f"Could not write metadata sidecar for {slug}: {exc}")
+
         return output_path
+
+    # ── Strategy-page metadata helpers ───────────────────────────────────────
+
+    def _is_strategy_page(self) -> bool:
+        """
+        Fast 3-second probe: returns True only when the 'Strategy report' /
+        'Strategy Tester' tab is present in the DOM.
+
+        TradingView shows this tab exclusively for strategy scripts. If it is
+        absent after 3 s the page is an Indicator/Study and metric extraction
+        should be skipped immediately — no further waiting.
+        """
+        try:
+            WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.XPATH, _STRATEGY_TAB_PROBE_XPATH))
+            )
+            return True
+        except Exception:
+            logger.debug("[META] Strategy report tab not found (likely an Indicator/Study).")
+            return False
+
+    def _extract_description_text(self) -> Optional[str]:
+        """
+        Click the 'Description' tab and return the visible text content.
+        Returns None if the tab is absent or text extraction fails.
+        """
+        try:
+            for xpath in _DESCRIPTION_TAB_XPATHS:
+                try:
+                    tab = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    tab.click()
+                    logger.debug("Clicked 'Description' tab.")
+                    break
+                except Exception:
+                    continue
+
+            # Wait for any description container to appear.
+            for css in _DESCRIPTION_BODY_SELECTORS:
+                try:
+                    el = WebDriverWait(self.driver, 6).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, css))
+                    )
+                    text = el.text.strip()
+                    if text:
+                        logger.debug(f"[DESC] Extracted {len(text)} chars via '{css}'.")
+                        return text
+                except Exception:
+                    continue
+
+            # Fallback 1: generic class-name JS sweep for any description container.
+            try:
+                body_text = self.driver.execute_script(
+                    "var el = document.querySelector('[class*=\"description\"],"
+                    "[class*=\"Description\"]');"
+                    "return el ? el.innerText : null;"
+                )
+                if body_text and len(body_text.strip()) > 20:
+                    logger.debug("[DESC] Extracted via generic description JS fallback.")
+                    return body_text.strip()
+            except Exception:
+                pass
+
+            # Fallback 2: extract the short description from the script header area.
+            # TradingView renders a subtitle / tagline beneath the script title in
+            # elements like <h2>, <p>, or a dedicated subtitle container.
+            try:
+                short_desc = self.driver.execute_script("""
+(function() {
+    var candidates = [
+        document.querySelector('[class*="shortDescription"]'),
+        document.querySelector('[class*="short-description"]'),
+        document.querySelector('[class*="subtitle"]'),
+        document.querySelector('[class*="Subtitle"]'),
+        document.querySelector('[class*="scriptTitle"] + *'),
+        document.querySelector('h2'),
+        document.querySelector('[class*="header"] p'),
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+        if (candidates[i]) {
+            var t = candidates[i].innerText.trim();
+            if (t && t.length > 10) return t;
+        }
+    }
+    return null;
+})();
+""")
+                if short_desc and len(short_desc.strip()) > 10:
+                    logger.debug("[DESC] Extracted short description from header area.")
+                    return short_desc.strip()
+            except Exception:
+                pass
+
+        except Exception as exc:
+            logger.warning(f"[META] Description extraction error: {exc}")
+
+        return None
+
+    def _extract_strategy_report_metrics(self) -> dict:
+        """
+        Click the 'Strategy report' tab, wait for KPI cells to render, then
+        extract Total Trades, Profit Factor, Max Drawdown %, and Sharpe Ratio.
+
+        Uses WebDriverWait for every element lookup (no static sleeps).
+        Returns a dict with keys matching _KPI_LABEL_MAP; all values default
+        to None when extraction fails.
+        """
+        metrics: dict = {
+            "total_trades":     None,
+            "profit_factor":    None,
+            "max_drawdown_pct": None,
+            "sharpe_ratio":     None,
+        }
+
+        try:
+            # Fast 3-second probe: bail immediately for Indicator/Study pages.
+            is_strategy = self._is_strategy_page()
+            if not is_strategy:
+                logger.info("[META] Not a strategy page — skipping Strategy Report extraction.")
+                return metrics
+
+            # Click the Strategy report tab (prioritises exact label from TV image).
+            clicked = False
+            for xpath in _STRATEGY_TESTER_TAB_XPATHS:
+                try:
+                    tab = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    tab.click()
+                    clicked = True
+                    logger.debug("Clicked 'Strategy report' tab.")
+                    break
+                except Exception:
+                    continue
+
+            if not clicked:
+                logger.warning("[META] 'Strategy report' tab not clickable; skipping metrics.")
+                return metrics
+
+            # Wait directly for the "Total trades" KPI label — this is the definitive
+            # signal that the Strategy Report panel has fully rendered.
+            # (Inner sub-tabs do not use role='tab' so an XPath sub-tab check is unreliable.)
+            first_label = _KPI_LABEL_MAP["total_trades"][0]
+            panel_ready = False
+            try:
+                WebDriverWait(self.driver, 15).until(
+                    EC.presence_of_element_located(
+                        (By.XPATH,
+                         f"//*[translate(normalize-space(text()),"
+                         f"'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')"
+                         f"='{first_label}']")
+                    )
+                )
+                panel_ready = True
+                logger.debug("[META] Strategy Report panel confirmed ready (KPI label visible).")
+            except Exception:
+                logger.warning("[META] KPI cells did not load in 15 s; skipping metrics.")
+                return metrics
+
+            # Extract each KPI using Selenium XPath (works with Shadow DOM / React portals
+            # where document.querySelectorAll cannot reach).
+            # Strategy: find the label element, then navigate to parent's following sibling
+            # which contains the value (confirmed by DOM trace).
+            for metric_key, label_candidates in _KPI_LABEL_MAP.items():
+                raw_value: Optional[str] = None
+
+                for label in label_candidates:
+                    # XPath strategy 1: label → parent → following-sibling (e.g. container-DiHajR6I)
+                    xpath_s1 = (
+                        f"//*[translate(normalize-space(text()),"
+                        f"'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='{label}']"
+                        f"/parent::*/following-sibling::*[1]"
+                    )
+                    # XPath strategy 2: label → direct following-sibling (in case structure is flat)
+                    xpath_s2 = (
+                        f"//*[translate(normalize-space(text()),"
+                        f"'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='{label}']"
+                        f"/following-sibling::*[1]"
+                    )
+                    for xp in (xpath_s1, xpath_s2):
+                        try:
+                            val_el = self.driver.find_element(By.XPATH, xp)
+                            raw_value = val_el.text.strip() or None
+                            if raw_value:
+                                break
+                        except Exception:
+                            continue
+                    if raw_value:
+                        break
+
+                if not raw_value:
+                    logger.debug(f"[META] KPI '{metric_key}' not found in DOM.")
+                    continue
+
+                # For max_drawdown_pct the value cell contains both the absolute
+                # dollar amount AND the percentage (e.g. "143.28\nUSD\n4.19%").
+                # We always want the percentage — take the last number before "%".
+                if metric_key == "max_drawdown_pct" and raw_value and "%" in raw_value:
+                    pct_candidates = re.findall(r"[-+]?\d+\.?\d*", raw_value[:raw_value.rfind("%")])
+                    parsed = float(pct_candidates[-1]) if pct_candidates else _parse_metric_to_float(raw_value)
+                else:
+                    parsed = _parse_metric_to_float(raw_value)
+
+                if parsed is None:
+                    logger.debug(f"[META] Could not parse '{metric_key}' from {raw_value!r}.")
+                    continue
+
+                metrics[metric_key] = int(parsed) if metric_key == "total_trades" else parsed
+                logger.debug(f"[META] {metric_key} = {metrics[metric_key]!r}")
+
+            # Sharpe ratio lives on the "Risk-adjusted performance" sub-tab.
+            # Click it, wait briefly, then extract using the same XPath strategy.
+            if metrics["sharpe_ratio"] is None:
+                try:
+                    risk_tab_xpath = (
+                        "//*[translate(normalize-space(.),"
+                        "'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')"
+                        "='risk-adjusted performance']"
+                    )
+                    risk_tab = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, risk_tab_xpath))
+                    )
+                    risk_tab.click()
+                    logger.debug("[META] Clicked 'Risk-adjusted performance' sub-tab.")
+
+                    for label in _KPI_LABEL_MAP["sharpe_ratio"]:
+                        xpath_s1 = (
+                            f"//*[translate(normalize-space(text()),"
+                            f"'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='{label}']"
+                            f"/parent::*/following-sibling::*[1]"
+                        )
+                        xpath_s2 = (
+                            f"//*[translate(normalize-space(text()),"
+                            f"'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='{label}']"
+                            f"/following-sibling::*[1]"
+                        )
+                        # Table layout: label is nested 2 levels deep inside a <td>;
+                        # go up 2 parents to the <td> then to the value <td>.
+                        xpath_s3 = (
+                            f"//*[translate(normalize-space(text()),"
+                            f"'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='{label}']"
+                            f"/parent::*/parent::*/following-sibling::*[1]"
+                        )
+                        for xp in (xpath_s3, xpath_s1, xpath_s2):
+                            try:
+                                val_el = WebDriverWait(self.driver, 5).until(
+                                    EC.presence_of_element_located((By.XPATH, xp))
+                                )
+                                raw_sr = val_el.text.strip() or None
+                                if raw_sr:
+                                    parsed_sr = _parse_metric_to_float(raw_sr)
+                                    if parsed_sr is not None:
+                                        metrics["sharpe_ratio"] = parsed_sr
+                                        logger.debug(f"[META] sharpe_ratio = {parsed_sr!r}")
+                                    break
+                            except Exception:
+                                continue
+                        if metrics["sharpe_ratio"] is not None:
+                            break
+                except Exception as sr_exc:
+                    logger.debug(f"[META] Sharpe ratio sub-tab not found or extraction failed: {sr_exc}")
+
+        except Exception as exc:
+            logger.warning(f"[META] Strategy report extraction error: {exc}")
+
+        return metrics
 
     # ── Private helpers ───────────────────────────────────────────────────────
 

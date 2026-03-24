@@ -90,9 +90,18 @@ def run_tv_scraper(max_results: int = 6) -> None:
 
                 try:
                     pine = scraper.fetch_pinescript(url)
-                    scraper.save_to_input(pine, url, source=scrape_source)
-                    print(f"[OK]  ({len(pine):,} chars)")
-                    logger.info(f"Scraped: {slug} [{scrape_source}] ({len(pine)} chars)")
+                    meta = scraper.fetch_strategy_metadata(url)
+                    scraper.save_to_input(pine, url, source=scrape_source, metadata=meta)
+                    metrics_summary = ""
+                    if meta and meta.get("backtest_metrics"):
+                        bm = meta["backtest_metrics"]
+                        metrics_summary = (
+                            f" | trades={bm.get('total_trades')} "
+                            f"pf={bm.get('profit_factor')} "
+                            f"dd={bm.get('max_drawdown_pct')}%"
+                        )
+                    print(f"[OK]  ({len(pine):,} chars{metrics_summary})")
+                    logger.info(f"Scraped: {slug} [{scrape_source}] ({len(pine)} chars{metrics_summary})")
                     seen_urls.add(url)
                     saved += 1
                 except NotImplementedError as exc:

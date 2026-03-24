@@ -6,12 +6,106 @@ import json
 import logging
 import subprocess
 import threading
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 from src.pipeline import SUBPROCESS_ENV, _div, _verdict
 from src.pipeline.registry import _now_iso, save_registry
 
 logger = logging.getLogger("runner")
+
+
+# ---------------------------------------------------------------------------
+# Sidecar metadata schema (type-safe dataclass to prevent KeyError/TypeError
+# on malformed or partially-scraped JSON sidecars)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class BacktestMetrics:
+    total_trades:     Optional[int]   = None
+    profit_factor:    Optional[float] = None
+    max_drawdown_pct: Optional[float] = None
+    sharpe_ratio:     Optional[float] = None
+
+
+@dataclass
+class StrategyMetadata:
+    url:              str = ""
+    description:      Optional[str] = None
+    backtest_metrics: BacktestMetrics = field(default_factory=BacktestMetrics)
+
+
+def _load_strategy_metadata(pine_file: Path) -> Optional[StrategyMetadata]:
+    """
+    Load and validate the .meta.json sidecar that the scraper writes alongside
+    each .pine file.  Returns None (and logs a warning) if the file is absent,
+    unreadable, or structurally invalid.  Individual missing inner fields are
+    tolerated — they default to None in the dataclass.
+    """
+    sidecar = pine_file.with_suffix(".meta.json")
+    if not sidecar.exists():
+        return None
+    try:
+        raw = json.loads(sidecar.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError("Sidecar root is not a JSON object.")
+
+        bm_raw = raw.get("backtest_metrics") or {}
+        if not isinstance(bm_raw, dict):
+            bm_raw = {}
+
+        def _int_or_none(v) -> Optional[int]:
+            try:
+                return int(v) if v is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        def _float_or_none(v) -> Optional[float]:
+            try:
+                return float(v) if v is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        bm = BacktestMetrics(
+            total_trades=_int_or_none(bm_raw.get("total_trades")),
+            profit_factor=_float_or_none(bm_raw.get("profit_factor")),
+            max_drawdown_pct=_float_or_none(bm_raw.get("max_drawdown_pct")),
+            sharpe_ratio=_float_or_none(bm_raw.get("sharpe_ratio")),
+        )
+        desc = raw.get("description")
+        url  = raw.get("url", "")
+        return StrategyMetadata(
+            url=str(url) if url else "",
+            description=str(desc).strip() if desc else None,
+            backtest_metrics=bm,
+        )
+    except Exception as exc:
+        logger.warning(f"Could not load metadata sidecar {sidecar.name}: {exc}")
+        return None
+
+
+def _format_metadata_block(meta: StrategyMetadata) -> str:
+    """
+    Render a StrategyMetadata object as a plain-text BACKTEST_METADATA block
+    suitable for injection into the selector agent prompt.
+    """
+    bm = meta.backtest_metrics
+    lines = [
+        "--- BACKTEST_METADATA (scraped from TradingView) ---",
+        f"total_trades:     {bm.total_trades if bm.total_trades is not None else 'N/A'}",
+        f"profit_factor:    {bm.profit_factor if bm.profit_factor is not None else 'N/A'}",
+        f"max_drawdown_pct: {bm.max_drawdown_pct if bm.max_drawdown_pct is not None else 'N/A'}",
+        f"sharpe_ratio:     {bm.sharpe_ratio if bm.sharpe_ratio is not None else 'N/A'}",
+    ]
+    if meta.description:
+        # Truncate very long descriptions to avoid bloating the context window.
+        desc = meta.description[:1500]
+        if len(meta.description) > 1500:
+            desc += " [truncated]"
+        lines.append(f"author_description: |\n  {desc.replace(chr(10), chr(10) + '  ')}")
+    lines.append("--- END BACKTEST_METADATA ---")
+    return "\n".join(lines)
 
 
 def _normalize_timeframe(value: str | None) -> str:
@@ -70,8 +164,21 @@ def evaluate_strategy(pine_file: Path) -> dict | None:
     logger.info(f"Evaluating: {pine_file.name} ({len(raw)} chars)")
     logger.info(f"CLAUDE input (file path sent to agent):\n{pine_file.resolve()}")
 
+    meta_block = ""
+    strategy_meta = _load_strategy_metadata(pine_file)
+    if strategy_meta is not None:
+        meta_block = _format_metadata_block(strategy_meta) + "\n\n"
+        logger.info(
+            f"Metadata sidecar loaded for {pine_file.name}: "
+            f"trades={strategy_meta.backtest_metrics.total_trades} "
+            f"pf={strategy_meta.backtest_metrics.profit_factor} "
+            f"dd={strategy_meta.backtest_metrics.max_drawdown_pct}% "
+            f"sharpe={strategy_meta.backtest_metrics.sharpe_ratio}"
+        )
+
     prompt = (
         f"Evaluate this PineScript strategy. File: {pine_file.name}\n\n"
+        f"{meta_block}"
         f"{raw}\n\n"
         "Output ONLY a raw JSON object matching this exact schema — no markdown, no extra fields:\n"
         '{"pine_metadata": {"name": "...", "safe_name": "...", "timeframe": "...", "lookback_bars": 0}, '
