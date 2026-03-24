@@ -29,6 +29,13 @@ def __init__(self):
         timeframe="15m",  # Example, extract from PineScript
         lookback_hours=24  # Example, extract from PineScript
     )
+
+    # CRITICAL RL GUARD: Dynamically compute warmup period from indicator parameters.
+    # Replace param1, param2, etc. with the actual period variables for this strategy.
+    # Static class-level constants are FORBIDDEN — they crash RL hyperparameter tuning.
+    self.param1 = 10   # Example: replace with actual indicator period
+    self.param2 = 30   # Example: replace with actual indicator period
+    self.MIN_CANDLES_REQUIRED = 3 * max(self.param1, self.param2)
 ```
 
 ### The `run` Method

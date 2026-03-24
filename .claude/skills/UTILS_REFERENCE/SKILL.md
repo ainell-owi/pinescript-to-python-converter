@@ -32,7 +32,10 @@ resampled_df['sma'] = talib.SMA(resampled_df['close'].values, timeperiod=14)
 # This utility inherently shifts the data to prevent lookahead bias.
 merged_df = resampled_merge(original=df, resampled=resampled_df, fill_na=True)
 
-# The higher timeframe columns will be prefixed automatically (e.g., 'resample_240_sma')
+# The higher timeframe columns will be prefixed automatically.
+# The naming convention is: resample_{pine_timeframe_minutes}_{original_column_name}
+# e.g., for a 4h (240m) timeframe: 'resample_240_close', 'resample_240_sma_14'
+# The suffix always includes the exact indicator/column name as computed on the resampled df.
 # You can now use merged_df['resample_240_sma'] in your strategy logic.
 ```
 

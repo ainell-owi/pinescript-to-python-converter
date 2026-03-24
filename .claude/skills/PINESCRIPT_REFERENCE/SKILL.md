@@ -616,7 +616,9 @@ resampled_df['sma_14'] = talib.SMA(resampled_df['close'].values, timeperiod=14)
 # Step 3: Merge back without lookahead bias
 df = resampled_merge(original=df, resampled=resampled_df, fill_na=True)
 
-# Access via prefixed columns: df['resample_240_close'], df['resample_240_sma_14']
+# Access via prefixed columns using the convention: resample_{pine_timeframe_minutes}_{original_column_name}
+# e.g., df['resample_240_close'], df['resample_240_sma_14']
+# The suffix always includes the exact indicator/column name as computed on the resampled df.
 ```
 
 **Timeframe string mapping:**

@@ -6,7 +6,7 @@ description: Enforces the strict standard for multi-agent state transitions, act
 # SKILL: Standardized Logging & Communication Protocol
 
 ## Purpose
-This project relies on a multi-agent architecture (Orchestrator, Transpiler, Validator, TestGenerator, Integration). To allow the external Python `runner.py` to route and display logs correctly, ALL agents must strictly adhere to this communication protocol.
+This project relies on a multi-agent architecture (Orchestrator, Transpiler, Validator, TestGenerator, Integration). To allow the external Python `main.py` (and `src/pipeline/` modules) to route and display logs correctly, ALL agents must strictly adhere to this communication protocol.
 
 ## 1. State Transitions (Handoffs)
 The Python backend acts as a state machine. It relies on exact trigger phrases to know which agent is currently active. 

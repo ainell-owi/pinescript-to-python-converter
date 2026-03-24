@@ -34,7 +34,7 @@ The Orchestrator is only invoked AFTER this step and starts at Phase 1.
 
 ## Phase 3: Test Generation & Execution (QA)
 4. **Action:** Call **Test Generator Agent**.
-   - Task: Create `tests/strategies/test_<name>.py` using `sample_ohlcv_data`.
+   - Task: Create `tests/strategies/test_<safe_name>_strategy.py` using `sample_ohlcv_data`.
    - **MANDATORY:** Test Generator MUST run pytest after writing tests.
    - **On test failure (test bug):** Test Generator fixes the test (max 2 attempts).
    - **On test failure (strategy bug):** Test Generator reports `TEST_VALID_STRATEGY_BROKEN`.
@@ -57,6 +57,6 @@ The Orchestrator is only invoked AFTER this step and starts at Phase 1.
 `main.py` verifies orchestrator success by:
 1. Scanning stdout for `INTEGRATION_PASS` or `INTEGRATION_FALLBACK` token
 2. Verifying strategy file (`src/strategies/<name>_strategy.py`) exists on disk
-3. Verifying test file (`tests/strategies/test_<name>.py`) exists on disk
+3. Verifying test file (`tests/strategies/test_<safe_name>_strategy.py`) exists on disk
 
 Exit code 0 alone is NOT sufficient — all three checks must pass.
