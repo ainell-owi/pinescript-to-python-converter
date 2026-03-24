@@ -1,3 +1,8 @@
+---
+name: logging-protocol
+description: Enforces the strict standard for multi-agent state transitions, action tracing, and error reporting. Use this skill WHENEVER executing pipeline steps, handing off control between agents (Orchestrator, Transpiler, Validator, TestGenerator, Integration), or logging errors related to pipeline constraints.
+---
+
 # SKILL: Standardized Logging & Communication Protocol
 
 ## Purpose

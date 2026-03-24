@@ -1,3 +1,8 @@
+---
+name: base-strategy-contract
+description: Enforces the mandatory BaseStrategy Python contract for PineScript transpilation. Automatically use this skill WHENEVER generating, modifying, or validating a strategy class. It ensures the strategy correctly inherits from BaseStrategy, implements the dynamic MIN_CANDLES_REQUIRED for RL safety, uses the correct file naming convention (_strategy.py), and returns valid StrategyRecommendation signals.
+---
+
 # Base Strategy Contract
 
 All generated Python strategies MUST strictly adhere to the `BaseStrategy` interface defined in `src/base_strategy.py`. 

@@ -1,3 +1,8 @@
+---
+name: conversion-flow
+description: Defines the strict multi-agent execution pipeline for converting PineScript to Python. Use this skill to understand the Orchestrator's step-by-step workflow (Phases 0-5), including Transpilation, Validation, Test Generation, and MCP GitHub Integration. Automatically load this when routing tasks between agents, managing the transpilation lifecycle, or determining the next pipeline phase.
+---
+
 # PineScript to Python Conversion Workflow
 
 This document defines the step-by-step execution flow for the Orchestrator Agent.

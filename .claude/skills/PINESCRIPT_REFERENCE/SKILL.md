@@ -1,3 +1,8 @@
+---
+name: pinescript-reference
+description: The authoritative dictionary for translating PineScript v5 to Python (Pandas/TA-Lib). Use this skill CONSTANTLY during transpilation to map Pine variables, indicators (ta.*), and math constructs to vectorized Python code. Enforces strict architectural rules-> no lookahead bias (bans np.roll), strict BaseStrategy templates, type-safe TA-Lib usage, and dynamic RL warmup periods.
+---
+
 # Pine Script v5 to Python Translation Reference
 
 This document is the authoritative translation dictionary for converting Pine Script v5 strategies to Python.
@@ -49,6 +54,8 @@ Pine Script operates on implicit bar-by-bar series. In Python, these are columns
 ## 2. Historical Referencing (`[]` Operator)
 
 Pine's `[]` operator accesses past bar values. In Python, use `.shift()`.
+
+**CRITICAL RULE:** NEVER use `np.roll()` to shift time-series arrays. It wraps data around and introduces massive lookahead bias, destroying the RL Engine. ALWAYS use `pd.Series.shift()`.
 
 ### 2.1 Basic Mapping
 
@@ -120,6 +127,7 @@ These Pine Script indicators map directly to TA-Lib function calls.
 **Required import:**
 ```python
 import talib
+from talib import MA_Type # MANDATORY for Mypy type-safety
 ```
 
 #### Moving Averages
@@ -188,7 +196,7 @@ df['stoch_d'] = slowd
 ```python
 # Python — TA-Lib Bollinger Bands
 upper, middle, lower = talib.BBANDS(
-    df['close'], timeperiod=20, nbdevup=2, nbdevdn=2
+    df['close'], timeperiod=20, nbdevup=2, nbdevdn=2, matype=MA_Type.SMA
 )
 df['bb_upper']  = upper
 df['bb_middle'] = middle
@@ -624,11 +632,14 @@ df = resampled_merge(original=df, resampled=resampled_df, fill_na=True)
 
 ### 5.5 Full Strategy Template
 
+**CRITICAL:** The filename MUST end with `_strategy.py` (e.g., `my_converted_strategy.py`).
+
 ```python
 from datetime import datetime
 import numpy as np
 import pandas as pd
 import talib
+from talib import MA_Type
 from src.base_strategy import BaseStrategy, StrategyRecommendation, SignalType
 
 
@@ -641,11 +652,20 @@ class MyConvertedStrategy(BaseStrategy):
             timeframe="15m",
             lookback_hours=48,
         )
+        
+        # CRITICAL RL GUARD: Calculate dynamic warmup period based on max indicator length
+        self.fast_period = 10
+        self.slow_period = 30
+        self.MIN_CANDLES_REQUIRED = 3 * max(self.fast_period, self.slow_period)
 
     def run(self, df: pd.DataFrame, timestamp: datetime) -> StrategyRecommendation:
+        # --- CRITICAL RL GUARD ---
+        if len(df) < self.MIN_CANDLES_REQUIRED:
+            return StrategyRecommendation(SignalType.HOLD, timestamp, confidence=0.0)
+    
         # --- Indicator calculations ---
-        df['sma_fast'] = talib.SMA(df['close'].values, timeperiod=10)
-        df['sma_slow'] = talib.SMA(df['close'].values, timeperiod=30)
+        df['sma_fast'] = talib.SMA(df['close'].values, timeperiod=self.fast_period)
+        df['sma_slow'] = talib.SMA(df['close'].values, timeperiod=self.slow_period)
 
         # --- Get the last complete bar ---
         last = df.iloc[-1]
@@ -773,3 +793,6 @@ df['result'] = np.select([condition1, condition2], [value1, value2], default=def
 | Close position | `strategy.close_all()` | `StrategyRecommendation(SignalType.FLAT, ts)` |
 | Higher TF data | `request.security(sym, "240", close)` | `resample_to_interval(df, "4h")` + `resampled_merge(...)` |
 | Conditional (series) | `x > y ? a : b` | `np.where(x > y, a, b)` |
+```
+
+
