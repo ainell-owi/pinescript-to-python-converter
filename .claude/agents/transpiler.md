@@ -100,3 +100,9 @@ Report template:
 ### Warnings / workarounds
 ### Files written
 ```
+
+After writing the report file, you MUST emit this token as the **last line** of your response:
+```
+TRANSPILER_LOG_WRITTEN: <absolute_path_to_agent_transpiler.md>
+```
+The Orchestrator will not proceed to the Validator until it sees this token.

@@ -107,3 +107,15 @@ Report template:
 ### PR URL
 ### Audit trail summary
 ```
+
+After writing the report file, you MUST emit `INTEGRATION_LOG_WRITTEN` **before** `INTEGRATION_PASS` / `INTEGRATION_FALLBACK`. The required output sequence is:
+```
+INTEGRATION_LOG_WRITTEN: <absolute_path_to_agent_integration.md>
+INTEGRATION_PASS
+```
+or
+```
+INTEGRATION_LOG_WRITTEN: <absolute_path_to_agent_integration.md>
+INTEGRATION_FALLBACK
+```
+The Orchestrator requires both tokens. Emitting `INTEGRATION_PASS` without `INTEGRATION_LOG_WRITTEN` first is a protocol violation.

@@ -18,6 +18,15 @@ logger = logging.getLogger("runner")
 # Tokens the Integration Agent must emit to signal workflow completion.
 _SUCCESS_TOKENS = {"INTEGRATION_PASS", "INTEGRATION_FALLBACK"}
 
+# Tokens each sub-agent must emit after writing its agent_*.md decision log.
+# Detected passively in the stream; missing tokens trigger a soft warning (not hard failure).
+_LOG_TOKENS = {
+    "TRANSPILER_LOG_WRITTEN",
+    "VALIDATOR_LOG_WRITTEN",
+    "TEST_GENERATOR_LOG_WRITTEN",
+    "INTEGRATION_LOG_WRITTEN",
+}
+
 
 def _setup_strategy_logger(strategy_name: str) -> tuple[logging.Logger, Path]:
     """Create a dedicated timestamped logger + log directory for a conversion run."""
@@ -95,6 +104,7 @@ def run_orchestrator(
         current_agent = "ORCHESTRATOR"
         killed_by_watchdog = threading.Event()
         completion_token_found = False
+        seen_log_tokens: set[str] = set()
 
         def _kill_on_timeout():
             killed_by_watchdog.set()
@@ -111,11 +121,16 @@ def run_orchestrator(
                 if not stripped:
                     continue
 
-                # --- Token detection (P1 fix) ---
+                # --- Token detection ---
                 for token in _SUCCESS_TOKENS:
                     if token in stripped:
                         completion_token_found = True
                         strat_logger.info(f"Completion token detected: {token}")
+
+                for token in _LOG_TOKENS:
+                    if token in stripped:
+                        seen_log_tokens.add(token)
+                        strat_logger.info(f"Log token detected: {token}")
 
                 # --- Agent routing ---
                 lower_line = stripped.lower()
@@ -153,6 +168,17 @@ def run_orchestrator(
             print("\n    Orchestrator timed out (15 min).", flush=True)
             return False, run_dir
 
+        missing_log_tokens = _LOG_TOKENS - seen_log_tokens
+        if missing_log_tokens:
+            strat_logger.warning(
+                f"Sub-agent log tokens missing: {', '.join(sorted(missing_log_tokens))}"
+            )
+            print(
+                f"    [WARN] Agent log tokens not seen in output: "
+                f"{', '.join(sorted(missing_log_tokens))}",
+                flush=True,
+            )
+
         if process.returncode == 0 and completion_token_found:
             strat_logger.info("Orchestrator completed successfully (token verified).")
             return True, run_dir
@@ -189,6 +215,31 @@ def copy_artifacts(meta: dict, output_dir: Path, run_dir: Path) -> None:
     run_log = run_dir / "run.log"
     if run_log.exists():
         shutil.copy2(run_log, output_dir / "run.log")
+
+    # Copy .meta.json sidecar if it exists alongside the .pine file in input/.
+    # This makes the backtest metadata part of the permanent output snapshot.
+    from src.pipeline import INPUT_DIR
+    pine_candidates = list(INPUT_DIR.glob(f"*{safe}*.pine"))
+    if pine_candidates:
+        sidecar = pine_candidates[0].with_suffix(".meta.json")
+        if sidecar.exists():
+            shutil.copy2(sidecar, output_dir / "metadata.json")
+            logger.info(f"Copied metadata sidecar: {sidecar}")
+
+    # Warn when sub-agent decision logs are absent — indicates the orchestrator
+    # agent did not enforce Rule #4 (Report File Verification Gate).
+    expected_agents = ["transpiler", "validator", "test_generator", "integration"]
+    missing = [a for a in expected_agents if not (output_dir / f"agent_{a}.md").exists()]
+    if missing:
+        logger.warning(
+            f"[LOGGING] Missing agent decision logs in {output_dir}: "
+            + ", ".join(f"agent_{a}.md" for a in missing)
+        )
+        print(
+            f"    [WARN] Agent logs missing from output snapshot: "
+            + ", ".join(f"agent_{a}.md" for a in missing),
+            flush=True,
+        )
 
 
 def verify_artifacts(safe_name: str) -> bool:

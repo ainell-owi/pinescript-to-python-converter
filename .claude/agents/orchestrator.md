@@ -80,17 +80,25 @@ When instructing the Transpiler Agent to generate a strategy file, you MUST expl
    - If the **Integration Agent** fails:
      1. Output `INTEGRATION_FALLBACK` (no retry).
 
-4. **Report File Verification (Anti-Laziness Gate):**
-   A sub-agent's response is only accepted as "SUCCESS" when it **explicitly states the
-   absolute path** to its written `agent_*.md` report file in its response text.
-   - If the agent says "SUCCESS" but omits the report path: **REJECT** the response.
-   - Do NOT proceed to the next agent. Re-prompt the offending agent:
-     > "Your response is REJECTED. You claimed SUCCESS but did not provide the path to
-     > your report file. Write your full decision log to:
-     > `<output_snapshot>/agent_<yourname>.md`
-     > Then re-state SUCCESS and include the absolute path of the written file."
-   - After resubmission, use your **Read tool** to open the reported path and confirm
-     the file exists and is non-empty before proceeding to the next agent.
+4. **Report File Verification (Log Token Gate):**
+   A sub-agent's response is only accepted as "SUCCESS" when it contains the exact log token
+   for that agent:
+
+   | Agent          | Required token                 |
+   |----------------|-------------------------------|
+   | Transpiler     | `TRANSPILER_LOG_WRITTEN`      |
+   | Validator      | `VALIDATOR_LOG_WRITTEN`       |
+   | Test Generator | `TEST_GENERATOR_LOG_WRITTEN`  |
+   | Integration    | `INTEGRATION_LOG_WRITTEN`     |
+
+   - If the token is absent: **REJECT** the response immediately. Do NOT proceed to the next agent.
+   - Re-prompt the offending agent exactly once:
+     > "REJECTED: your response is missing `<TOKEN>`. Write your full decision log to
+     > `<output_snapshot>/agent_<yourname>.md` and emit the token as the last line of
+     > your response."
+   - After resubmission, verify the token is present before continuing.
+   - If the token is still absent after one re-prompt: print
+     `CONVERSION_FAILED: <AgentName> did not emit log token after retry` and STOP.
 
 # Initialization
 When the user provides a PineScript file (or asks to process `input/source_strategy.pine`), initiate **Phase 1** of the Conversion Flow immediately.

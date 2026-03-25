@@ -97,3 +97,9 @@ Report template:
 <paste pytest -v output summary here>
 ### Coverage gaps noted
 ```
+
+After writing the report file, you MUST emit this token as the **last line** of your response:
+```
+TEST_GENERATOR_LOG_WRITTEN: <absolute_path_to_agent_test_generator.md>
+```
+The Orchestrator will not proceed to the Integration Agent until it sees this token.

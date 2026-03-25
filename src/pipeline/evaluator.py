@@ -168,13 +168,18 @@ def evaluate_strategy(pine_file: Path) -> dict | None:
     strategy_meta = _load_strategy_metadata(pine_file)
     if strategy_meta is not None:
         meta_block = _format_metadata_block(strategy_meta) + "\n\n"
-        logger.info(
-            f"Metadata sidecar loaded for {pine_file.name}: "
-            f"trades={strategy_meta.backtest_metrics.total_trades} "
-            f"pf={strategy_meta.backtest_metrics.profit_factor} "
-            f"dd={strategy_meta.backtest_metrics.max_drawdown_pct}% "
-            f"sharpe={strategy_meta.backtest_metrics.sharpe_ratio}"
+        bm = strategy_meta.backtest_metrics
+        msg = (
+            f"[META] Sidecar injected into selector prompt — "
+            f"trades={bm.total_trades} "
+            f"pf={bm.profit_factor} "
+            f"dd={bm.max_drawdown_pct}% "
+            f"sharpe={bm.sharpe_ratio}"
         )
+        logger.info(msg)
+        print(f"    {msg}", flush=True)
+    else:
+        print(f"    [META] No sidecar found for {pine_file.name} — selector runs without backtest metrics.", flush=True)
 
     prompt = (
         f"Evaluate this PineScript strategy. File: {pine_file.name}\n\n"

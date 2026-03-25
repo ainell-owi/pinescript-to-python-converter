@@ -35,3 +35,9 @@ Report template:
 |---|---|---|
 ### Issues found (if any)
 ```
+
+After writing the report file, you MUST emit this token as the **last line** of your response:
+```
+VALIDATOR_LOG_WRITTEN: <absolute_path_to_agent_validator.md>
+```
+The Orchestrator will not proceed to the Test Generator until it sees this token.
