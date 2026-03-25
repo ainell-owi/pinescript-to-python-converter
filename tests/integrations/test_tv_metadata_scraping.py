@@ -39,9 +39,6 @@ from src.utils.tv_scraper import TradingViewScraper, _parse_metric_to_float
 # ---------------------------------------------------------------------------
 _TEST_URL = "https:/www.tradingview.com/script/9mfAwbgS/"
 
-pytestmark = pytest.mark.integration
-
-
 # ===========================================================================
 # Section 1 — Pure-unit tests for _parse_metric_to_float  (no browser)
 # ===========================================================================
@@ -174,6 +171,7 @@ def scraped_data(scraper_instance, tmp_input_dir):
     }
 
 
+@pytest.mark.integration
 class TestPineScriptExtraction:
     """Verify that the raw PineScript source is extracted correctly."""
 
@@ -191,6 +189,7 @@ class TestPineScriptExtraction:
         )
 
 
+@pytest.mark.integration
 class TestMetadataStructure:
     """Verify the shape and top-level keys of the metadata dict."""
 
@@ -217,6 +216,7 @@ class TestMetadataStructure:
         )
 
 
+@pytest.mark.integration
 class TestMetricTypes:
     """
     The core type-safety assertions: scraped values must arrive as Python
@@ -269,6 +269,7 @@ class TestMetricTypes:
             )
 
 
+@pytest.mark.integration
 class TestSidecarFile:
     """Verify the .meta.json sidecar written by save_to_input()."""
 

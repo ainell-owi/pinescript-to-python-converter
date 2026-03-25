@@ -357,8 +357,8 @@
     "archived_at": "2026-03-21T11:16:27.085673+00:00"
   },
   "Monthly-Returns-in-PineScript-Strategies.pine": {
-    "file_path": "input\\Monthly-Returns-in-PineScript-Strategies.pine",
-    "status": "evaluated",
+    "file_path": "archive\\Monthly-Returns-in-PineScript-Strategies.pine",
+    "status": "archived",
     "registered_at": "2026-03-21T11:27:25.628840+00:00",
     "scrape_source": "editors_pick",
     "evaluated_at": "2026-03-21T11:27:49.053183+00:00",
@@ -371,7 +371,8 @@
     "btc_score": 2,
     "project_score": 3,
     "recommendation_reason": "PineScript v4 pivot-reversal strategy with a large monthly-returns display table (~60% of code) that is pure visualization and irrelevant to signal generation. Core trading logic is simple pivot-high/low breakout entries using stop orders, which complicates conversion since our framework emits signals only, not order types. pivothigh/pivotlow need custom implementations. The strategy itself is very basic — no filters, no exits beyond reversals, no risk management — limiting its value for BTC trading. Combined score 5 meets the minimum threshold but offers little alpha.",
-    "skip_count": 1
+    "skip_count": 2,
+    "archived_at": "2026-03-24T17:24:42.196556+00:00"
   },
   "Vortex-Confluence-Protocol-JOAT.pine": {
     "file_path": "archive\\Vortex-Confluence-Protocol-JOAT.pine",
@@ -390,5 +391,63 @@
     "recommendation_reason": "Evaluation failed — scored 0.",
     "skip_count": 1,
     "archived_at": "2026-03-21T11:31:54.962578+00:00"
+  },
+  "%D0%A1alculation-a-position-size-based-on-risk.pine": {
+    "file_path": "archive\\%D0%A1alculation-a-position-size-based-on-risk.pine",
+    "status": "archived",
+    "registered_at": "2026-03-24T17:10:15.682063+00:00",
+    "scrape_source": "editors_pick",
+    "evaluated_at": "2026-03-24T17:10:31.577853+00:00",
+    "pine_metadata": {
+      "name": "Сalculation a position size based on risk",
+      "safe_name": "calculation_a_position_size_based_on_risk",
+      "timeframe": "default",
+      "lookback_bars": 444
+    },
+    "category": "Educational",
+    "btc_score": 1,
+    "project_score": 1,
+    "recommendation_reason": "Purely educational script demonstrating position sizing math. Entries are random (bar_index % 333 / % 444) with no signal logic, indicators, or market structure. Only 7 trades in backtest confirms this is not a real strategy. Nothing meaningful to transpile for the RL engine — no feature extractors, no trend/momentum/volatility signals. Archive immediately.",
+    "skip_count": 1,
+    "archived_at": "2026-03-24T17:24:42.197559+00:00"
+  },
+  "AleksDU-Zero-Lag-Pro-Safe-Mode.pine": {
+    "file_path": "archive\\AleksDU-Zero-Lag-Pro-Safe-Mode.pine",
+    "status": "completed",
+    "registered_at": "2026-03-24T17:10:15.682063+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-03-24T17:10:56.571609+00:00",
+    "pine_metadata": {
+      "name": "[AleksDU AI] Zero-Lag Pro: Safe Mode",
+      "safe_name": "aleks_du_zero_lag_pro_safe_mode",
+      "timeframe": "4h",
+      "lookback_bars": 38
+    },
+    "category": "Trend",
+    "btc_score": 5,
+    "project_score": 7,
+    "recommendation_reason": "Simple two-indicator system (HMA-32 + ATR-14 noise filter) with clean long/short entries and a cross-based exit. No MTF, no request.security, and fully vectorizable without lookahead risk. The HMA is straightforward to implement via pandas WMA chains with pd.Series.shift() for the [1] bar lookback. Transpilation complexity is low. BTC score is moderate: Sharpe of 0.096 is very weak, 1624 trades indicates overtrading, and the backtest was on ETH 4H not BTC — cross-asset generalization is unverified. Project score is solid due to architectural simplicity and zero MTF dependency.",
+    "converted_at": "2026-03-24T17:24:42.186632+00:00",
+    "archived_at": "2026-03-24T17:24:42.186632+00:00",
+    "output_dir": "output\\aleks_du_zero_lag_pro_safe_mode\\2026-03-24_17-11-15"
+  },
+  "How-to-use-Leverage-and-Margin-in-PineScript.pine": {
+    "file_path": "archive\\How-to-use-Leverage-and-Margin-in-PineScript.pine",
+    "status": "archived",
+    "registered_at": "2026-03-24T17:10:15.682063+00:00",
+    "scrape_source": "editors_pick",
+    "evaluated_at": "2026-03-24T17:11:15.269043+00:00",
+    "pine_metadata": {
+      "name": "How to use Leverage and Margin in PineScript",
+      "safe_name": "how_to_use_leverage_and_margin_in_pinescript",
+      "timeframe": "any",
+      "lookback_bars": 20
+    },
+    "category": "Oscillator",
+    "btc_score": 1,
+    "project_score": 1,
+    "recommendation_reason": "Explicitly educational script demonstrating leverage/margin mechanics, not a viable trading strategy. Backtest metrics are catastrophic: profit_factor 0.994 (net losing), max_drawdown 94.64%, sharpe 0.112. Uses PineScript v4 stochastic crossover with 3000% equity sizing to simulate 30:1 leverage — the extreme position sizing is intentional for demo purposes and would be destructive in production. No conversion value for the RL engine.",
+    "skip_count": 1,
+    "archived_at": "2026-03-24T17:24:42.198558+00:00"
   }
 }
