@@ -31,8 +31,6 @@ logger = logging.getLogger("runner")
 INFRA_FAILURE_STATUSES = {"read_error", "dependency_missing", "timeout", "invalid_json"}
 FAKE_STATE_KEYWORDS = (
     "strategy.equity",
-    "strategy.closedtrades",
-    "strategy.wintrades",
     "strategy.grossprofit",
     "strategy.netprofit",
 )
@@ -163,6 +161,25 @@ def _parse_json_from_output(raw: str) -> dict:
     return json.loads(cleaned[start:end])
 
 
+_REJECTION_SIGNAL_RE = re.compile(
+    r"\b("
+    r"skip|reject|abort|disqualif|incompatible|broken|not viable|"
+    r"cannot be converted|not recommended|structurally broken|"
+    r"no viable|unresolvable|immediate(?:ly)? abort|"
+    r"recommend(?:ed)?\s+(?:skip|archiv)"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _detect_score_reason_dissonance(
+    btc_score: int, project_score: int, reason: str
+) -> bool:
+    if btc_score <= 0 and project_score <= 0:
+        return False
+    return bool(_REJECTION_SIGNAL_RE.search(reason))
+
+
 def _safe_name(value: str) -> str:
     return "".join(c if c.isalnum() else "_" for c in value).strip("_")
 
@@ -220,16 +237,6 @@ def _deterministic_rejection(raw: str, meta: StrategyMetadata | None) -> Optiona
     fake_state = _contains_any(raw, FAKE_STATE_KEYWORDS)
     if fake_state:
         return f"Rejected before selector: signal logic depends on self-evaluation state via `{fake_state}`."
-
-    description = meta.description.lower() if meta and meta.description else ""
-    sizing_keyword = _contains_any(raw, POSITION_SIZING_KEYWORDS) or _contains_any(
-        description, POSITION_SIZING_KEYWORDS
-    )
-    if sizing_keyword:
-        return (
-            "Rejected before selector: strategy appears centered on position sizing / trade "
-            f"management via `{sizing_keyword}`."
-        )
 
     heavy_loop_reason = _detect_heavy_historical_loop(raw)
     if heavy_loop_reason:
@@ -410,8 +417,15 @@ def run_evaluations(registry: dict) -> dict:
 
         if outcome.payload and required.issubset(outcome.payload):
             result = outcome.payload
-            btc = result["btc_score"]
-            proj = result["project_score"]
+            raw_btc = result["btc_score"]
+            raw_proj = result["project_score"]
+            btc = max(0, min(5, int(raw_btc)))
+            proj = max(0, min(5, int(raw_proj)))
+            if btc != raw_btc or proj != raw_proj:
+                logger.warning(
+                    f"Score clamping for {key}: raw btc={raw_btc} proj={raw_proj} "
+                    f"clamped to btc={btc} proj={proj}"
+                )
             meta = result["pine_metadata"]
             category = result["category"]
             if not meta.get("safe_name"):
@@ -424,6 +438,19 @@ def run_evaluations(registry: dict) -> dict:
             reason = result.get("recommendation_reason", "")
             if not reason:
                 logger.warning(f"Selector returned no recommendation_reason for {key}")
+
+            if _detect_score_reason_dissonance(btc, proj, reason):
+                logger.warning(
+                    f"Score/reason dissonance for {key}: scores btc={btc} proj={proj} "
+                    f"but reason signals rejection. Overriding to 0/0."
+                )
+                print_warning(
+                    f"{key}: selector gave scores {btc}/{proj} but reason rejects the strategy. "
+                    f"Overriding to 0/0."
+                )
+                btc = 0
+                proj = 0
+
             registry[key].update(
                 {
                     "status": "evaluated",

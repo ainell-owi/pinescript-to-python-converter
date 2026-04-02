@@ -119,3 +119,30 @@ INTEGRATION_LOG_WRITTEN: <absolute_path_to_agent_integration.md>
 INTEGRATION_FALLBACK
 ```
 The Orchestrator requires both tokens. Emitting `INTEGRATION_PASS` without `INTEGRATION_LOG_WRITTEN` first is a protocol violation.
+
+---
+
+> ## ⚠️ CRITICAL — MANDATORY FINAL OUTPUT TOKENS ⚠️
+>
+> **This is a hard contract with the Python orchestrator (`main.py`). Violating it causes Exit Code 1 and a failed run.**
+>
+> At the very end of your final response — after writing the log file and after the PR link — you MUST output the following two tokens on separate lines, in this exact order:
+>
+> ```
+> INTEGRATION_LOG_WRITTEN: <absolute_path_to_agent_integration.md>
+> INTEGRATION_PASS
+> ```
+>
+> Or, if GitHub MCP was unavailable:
+>
+> ```
+> INTEGRATION_LOG_WRITTEN: <absolute_path_to_agent_integration.md>
+> INTEGRATION_FALLBACK
+> ```
+>
+> **Rules:**
+> - These tokens MUST be the very last lines of your output. Nothing should follow them.
+> - `INTEGRATION_LOG_WRITTEN` MUST precede `INTEGRATION_PASS` / `INTEGRATION_FALLBACK`. No exceptions.
+> - Do NOT wrap them in markdown code blocks, bullet points, or any other formatting. Emit them as raw plain text.
+> - Do NOT emit `INTEGRATION_PASS` if the PR was not successfully created (URL not returned). Use `INTEGRATION_FALLBACK` instead.
+> - Forgetting these tokens is not a minor issue — the orchestrator will mark the run as CONVERSION_FAILED regardless of whether the PR was created successfully.

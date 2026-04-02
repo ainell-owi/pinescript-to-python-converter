@@ -79,6 +79,7 @@ If ANY of the following is true, reject immediately:
 - The script relies on heavy `for` loops over hundreds/thousands of historical bars per candle,
   especially loops bounded by `bar_index`, `last_bar_index`, or large historical lookback variables.
 - There is no real `strategy()` declaration or it is clearly not a trading strategy.
+- **Crypto 24/7 Incompatibility:** The strategy logic relies on traditional stock market hours, session gaps, daily open/close gaps, or functions like `change(time('D'))` to detect session boundaries. Bitcoin trades 24/7 and does not have opening gaps between sessions; these strategies are structurally broken for our RL environment and produce nonsensical signals on continuous crypto data.
 
 For instant rejection:
 - Set `btc_score` to `0`
@@ -130,6 +131,17 @@ If assigned category count is `>= 15`, reject immediately and set both scores to
 - `safe_name`: replace all non-alphanumeric chars with `_`; strip leading/trailing `_`
 - `timeframe`: infer from explicit strings/inputs such as `15`, `60`, `240`, `D`; default to `1h` if ambiguous
 - `lookback_bars`: use `max_bars_back` if present; else estimate from the largest indicator/history dependency; minimum `100`
+
+# Cognitive Alignment (MANDATORY)
+Your numerical scores MUST be consistent with your written `recommendation_reason`.
+- If your reason concludes the strategy should be skipped, rejected, archived, or is structurally
+  broken, incompatible, not recommended, or has an unresolvable flaw, you MUST set BOTH
+  `btc_score` and `project_score` to `0`. No exceptions.
+- Do NOT award "sympathy points" for clean code, good formatting, or interesting ideas when
+  the core logic is rejected. A rejected strategy scores zero regardless of surface quality.
+- Before returning your JSON, re-read your `recommendation_reason`. If it contains words like
+  "skip", "reject", "not recommended", "abort", "disqualify", "incompatible", "broken",
+  "not viable", or "cannot be converted", verify that both scores are `0`.
 
 # Reasoning Discipline
 - Judge the ACTUAL trading logic, not cosmetic plots/tables/alerts.

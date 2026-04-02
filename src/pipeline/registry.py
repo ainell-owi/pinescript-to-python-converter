@@ -14,6 +14,12 @@ from src.pipeline import REGISTRY_PATH, INPUT_DIR, _EXCLUDED_PINE_FILES
 from src.pipeline.ui import print_info
 
 logger = logging.getLogger("runner")
+_STALE_PRECHECK_MARKERS = (
+    "strategy appears centered on position sizing / trade management",
+    "strategy.closedtrades",
+    "strategy.wintrades",
+)
+_SCORE_RANGE = (0, 5)
 
 
 def _now_iso() -> str:
@@ -45,6 +51,7 @@ def save_registry(registry: dict) -> None:
 def scan_and_register(registry: dict) -> dict:
     """Scan input/ for new .pine files and register them."""
     added = 0
+    requeued = 0
     for pine_file in sorted(INPUT_DIR.glob("*.pine")):
         key = pine_file.name
         if key in _EXCLUDED_PINE_FILES:
@@ -66,6 +73,25 @@ def scan_and_register(registry: dict) -> dict:
             }
             logger.info(f"Registered: {key} (source: {scrape_source})")
             added += 1
+        else:
+            rec = registry[key]
+            reason = str(rec.get("recommendation_reason", "") or "")
+            if rec.get("status") == "evaluated" and any(
+                marker in reason for marker in _STALE_PRECHECK_MARKERS
+            ):
+                rec["status"] = "new"
+                logger.info(f"Re-queued stale precheck result: {key}")
+                requeued += 1
+            elif rec.get("status") in ("evaluated", "failed"):
+                btc = rec.get("btc_score", 0)
+                proj = rec.get("project_score", 0)
+                if (isinstance(btc, (int, float)) and btc > _SCORE_RANGE[1]) or \
+                   (isinstance(proj, (int, float)) and proj > _SCORE_RANGE[1]):
+                    rec["status"] = "new"
+                    logger.info(f"Re-queued unclamped scores: {key} (btc={btc}, proj={proj})")
+                    requeued += 1
     if added:
         print_info(f"Registered {added} new file(s).")
+    if requeued:
+        print_info(f"Re-queued {requeued} stale precheck result(s).")
     return registry

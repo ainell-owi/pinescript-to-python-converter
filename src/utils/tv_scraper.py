@@ -196,6 +196,11 @@ STRATEGIES_LISTING_URL = "https://www.tradingview.com/scripts/?script_type=strat
 EDITORS_PICKS_URL      = "https://www.tradingview.com/scripts/editors-picks/?script_type=strategies"
 _MAX_PAGES = 20  # Hard cap for pagination to prevent runaway scraping
 _LISTING_ANCHOR_SELECTOR = "a[href*='/script/']"
+_LISTING_LOAD_MORE_XPATHS = [
+    "//*[self::button or self::a or @role='button'][contains(normalize-space(.), 'Show more publications')]",
+    "//*[self::button or self::a or @role='button'][contains(normalize-space(.), 'Load more')]",
+    "//*[self::button or self::a or @role='button'][contains(normalize-space(.), 'Show more')]",
+]
 _SCRIPT_URL_RE   = re.compile(r"/script/[A-Za-z0-9]+-[^/]+/$")
 _SCRIPT_PARTS_RE = re.compile(r"/script/([A-Za-z0-9]+)-([^/]+)/?$")
 
@@ -316,6 +321,48 @@ class TradingViewScraper:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
+    def _collect_listing_urls(self, max_results: int) -> list[str]:
+        elements = self.driver.find_elements(By.CSS_SELECTOR, _LISTING_ANCHOR_SELECTOR)
+        seen: set[str] = set()
+        urls: list[str] = []
+        for el in elements:
+            href = el.get_attribute("href") or ""
+            if _SCRIPT_URL_RE.search(href) and href not in seen:
+                seen.add(href)
+                urls.append(href)
+                if len(urls) >= max_results:
+                    break
+        return urls
+
+    def _expand_listing_once(self, current_count: int) -> bool:
+        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        try:
+            WebDriverWait(self.driver, 5).until(
+                lambda d: len(self._collect_listing_urls(current_count + 1)) > current_count
+            )
+            return True
+        except Exception:
+            pass
+
+        for xpath in _LISTING_LOAD_MORE_XPATHS:
+            try:
+                control = WebDriverWait(self.driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))
+                )
+                self.driver.execute_script(
+                    "arguments[0].scrollIntoView({block: 'center'});",
+                    control,
+                )
+                self.driver.execute_script("arguments[0].click();", control)
+                WebDriverWait(self.driver, 8).until(
+                    lambda d: len(self._collect_listing_urls(current_count + 1)) > current_count
+                )
+                return True
+            except Exception:
+                continue
+
+        return False
+
     def fetch_strategy_list(
         self,
         page_url: str = STRATEGIES_LISTING_URL,
@@ -333,10 +380,8 @@ class TradingViewScraper:
         if not self.driver:
             self.start_driver()
 
-        sep = "&" if "?" in page_url else "?"
-        url_with_page = f"{page_url}{sep}page={page}"
-        logger.info(f"Fetching strategy list from: {url_with_page}")
-        self.driver.get(url_with_page)
+        logger.info(f"Fetching strategy list from: {page_url}")
+        self.driver.get(page_url)
 
         try:
             WebDriverWait(self.driver, _WAIT_TIMEOUT).until(
@@ -349,19 +394,16 @@ class TradingViewScraper:
                 "Manual fallback: paste PineScript into input/source_strategy.pine"
             )
 
-        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
-        time.sleep(2)
-
-        elements = self.driver.find_elements(By.CSS_SELECTOR, _LISTING_ANCHOR_SELECTOR)
-        seen: set[str] = set()
-        urls: list[str] = []
-        for el in elements:
-            href = el.get_attribute("href") or ""
-            if _SCRIPT_URL_RE.search(href) and href not in seen:
-                seen.add(href)
-                urls.append(href)
-                if len(urls) >= max_results:
-                    break
+        urls = self._collect_listing_urls(max_results)
+        expansion_rounds = 0
+        while len(urls) < max_results and expansion_rounds < _MAX_PAGES:
+            expansion_rounds += 1
+            if not self._expand_listing_once(len(urls)):
+                break
+            updated_urls = self._collect_listing_urls(max_results)
+            if len(updated_urls) <= len(urls):
+                break
+            urls = updated_urls
 
         logger.info(f"Found {len(urls)} strategy URL(s).")
         return urls
@@ -378,20 +420,17 @@ class TradingViewScraper:
         is exhausted (page returns 0 results), or _MAX_PAGES is hit.
         """
         results: list[str] = []
-        for page_num in range(1, _MAX_PAGES + 1):
-            page_urls = self.fetch_strategy_list(
-                page_url=base_url,
-                max_results=50,
-                page=page_num,
-            )
-            if not page_urls:
-                logger.info(f"No results on page {page_num} for {base_url} — stopping pagination.")
-                break
-            for url in page_urls:
-                if url not in seen_urls and url not in results:
-                    results.append(url)
-                    if len(results) >= target:
-                        return results
+        listing_pool = self.fetch_strategy_list(
+            page_url=base_url,
+            max_results=max(50, target * 10),
+            page=1,
+        )
+        for url in listing_pool:
+            if url not in seen_urls and url not in results:
+                results.append(url)
+                if len(results) >= target:
+                    break
+
         return results
 
     def fetch_from_two_sources(
