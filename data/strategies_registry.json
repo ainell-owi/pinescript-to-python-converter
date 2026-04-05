@@ -799,7 +799,7 @@
     "status": "archived",
     "registered_at": "2026-04-02T15:19:50.137587+00:00",
     "scrape_source": "popular",
-    "evaluated_at": "2026-04-05T04:58:56.797171+00:00",
+    "evaluated_at": "2026-04-05T09:13:49.475767+00:00",
     "evaluation_status": "precheck_rejected",
     "pine_metadata": {
       "name": "Sovereign Execution [JOAT]",
@@ -811,9 +811,9 @@
     "btc_score": 0,
     "project_score": 0,
     "recommendation_reason": "REJECTED: Script is an execution framework/automation bot (matched keyword: 'bot'). This is not a mathematical signal generator and cannot be transpiled for RL feature extraction.",
-    "skip_count": 4,
+    "skip_count": 5,
     "failed_at": "2026-04-02T19:17:33.075197+00:00",
-    "archived_at": "2026-04-05T05:42:32.330171+00:00"
+    "archived_at": "2026-04-05T09:28:37.901415+00:00"
   },
   "BB-RSI-Mean-Reversion-Aggressive-Alerts.pine": {
     "file_path": "input\\BB-RSI-Mean-Reversion-Aggressive-Alerts.pine",
@@ -940,7 +940,7 @@
     "status": "evaluation_failed",
     "registered_at": "2026-04-02T15:56:14.610239+00:00",
     "scrape_source": "popular",
-    "evaluated_at": "2026-04-05T05:27:36.109986+00:00",
+    "evaluated_at": "2026-04-05T09:14:24.016118+00:00",
     "evaluation_status": "read_error",
     "pine_metadata": {
       "name": "ETH-Pro-Strategy-Long-Short-30m-V3-Alerts",
@@ -1079,7 +1079,7 @@
     "status": "evaluation_failed",
     "registered_at": "2026-04-02T16:09:44.888483+00:00",
     "scrape_source": "popular",
-    "evaluated_at": "2026-04-05T05:27:36.112035+00:00",
+    "evaluated_at": "2026-04-05T09:14:24.019119+00:00",
     "evaluation_status": "read_error",
     "pine_metadata": {
       "name": "KFin-Huynh",
@@ -1332,5 +1332,46 @@
     "recommendation_reason": "Core Supertrend flip logic is asset-agnostic and transferable to BTC, but the strategy is explicitly designed for Indian equity options (CE/PE, ATM strike rounding, NIFTY/BANKNIFTY step sizes) which are meaningless on BTC spot/futures. The stateful trailing SL (var float with math.max/min updates gated on position_size) is challenging to vectorize without introducing lookahead bias — it requires a bar-by-bar simulation loop rather than a clean vectorized pass. Metrics are mixed: profit_factor of 1.282 and max_drawdown of 13% are acceptable, but a Sharpe of -1.495 is a significant red flag indicating risk-adjusted returns are poor. Convertible but yields a niche, low-alpha signal for the RL engine.",
     "skip_count": 2,
     "archived_at": "2026-04-05T05:42:32.361375+00:00"
+  },
+  "Crucible-Convergence-Engine-JOAT.pine": {
+    "file_path": "archive\\Crucible-Convergence-Engine-JOAT\\Crucible-Convergence-Engine-JOAT.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T09:13:49.453679+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T09:13:49.479768+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "Crucible Convergence Engine [JOAT]",
+      "safe_name": "Crucible_Convergence_Engine__JOAT",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=134 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-05T09:28:37.905414+00:00"
+  },
+  "Trend-Pullback-Momentum-Side-Aware.pine": {
+    "file_path": "archive\\Trend-Pullback-Momentum-Side-Aware\\Trend-Pullback-Momentum-Side-Aware.pine",
+    "status": "completed",
+    "registered_at": "2026-04-05T09:13:49.454791+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T09:14:24.013119+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "Trend Pullback Momentum Side-Aware",
+      "safe_name": "trend_pullback_momentum_side_aware",
+      "timeframe": "15m",
+      "lookback_bars": 1600
+    },
+    "category": "Trend",
+    "btc_score": 3,
+    "project_score": 5,
+    "recommendation_reason": "Weak backtest metrics (profit_factor 1.005, Sharpe -0.135) limit live-trading confidence, but the strategy offers solid transpilation value: correct barmerge.lookahead_off on both request.security calls, asymmetric long/short parameter sets, composite entry logic (trend EMA + pullback reclaim window + RSI threshold + optional volume expansion), and ATR-based partial/swing exits. MTF resampling via src.utils.resampling is required for the 2h bias EMA (200-bar lookback drives the 1600-candle base-timeframe warmup). Recommend conversion for feature-extractor diversity despite marginal edge.",
+    "converted_at": "2026-04-05T09:28:37.892410+00:00",
+    "archived_at": "2026-04-05T09:28:37.892410+00:00",
+    "output_dir": "output\\trend_pullback_momentum_side_aware\\2026-04-05_09-14-24"
   }
 }

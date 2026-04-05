@@ -13,6 +13,9 @@ For specific coding tasks, refer to the domain rules loaded from `.claude/rules/
 - **`testing-standards.md`**: Naming conventions and usage of the `sample_ohlcv_data` fixture.
 - **`pipeline-flow.md`**: The state machine and registry logic.
 
+## Git Rules
+- **Never** include `Co-Authored-By` trailers in commit messages.
+
 ## Commands
 
 ```bash
