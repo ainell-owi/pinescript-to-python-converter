@@ -12,7 +12,7 @@
     },
     "btc_score": 3,
     "project_score": 4,
-    "recommendation_reason": "Clean EMA crossover strategy (9/21) filtered by 200 EMA trend direction with ATR-based brackets (1.0x SL / 1.5x TP) and optional breakeven. BTC score is moderate (3/5): the trend filter and positive R:R ratio are sound, but EMA crossovers generate whipsaw signals in BTC's frequent ranging/choppy periods — the chop filter helps but doesn't eliminate this. Project score is high (4/5): all indicators are standard TA-Lib (EMA, ATR), no multi-timeframe logic, no forbidden functions, and process_orders_on_close=true aligns well with bar-level Python backtesting. The only conversion complexity is the stateful cooldown counter (var int lastFlatBar) and the per-bar breakeven check using intra-bar high/low — both are straightforward to vectorize with pandas shift and cummax/cummin.",
+    "recommendation_reason": "Clean EMA crossover strategy (9/21) filtered by 200 EMA trend direction with ATR-based brackets (1.0x SL / 1.5x TP) and optional breakeven. BTC score is moderate (3/5): the trend filter and positive R:R ratio are sound, but EMA crossovers generate whipsaw signals in BTC's frequent ranging/choppy periods ג€” the chop filter helps but doesn't eliminate this. Project score is high (4/5): all indicators are standard TA-Lib (EMA, ATR), no multi-timeframe logic, no forbidden functions, and process_orders_on_close=true aligns well with bar-level Python backtesting. The only conversion complexity is the stateful cooldown counter (var int lastFlatBar) and the per-bar breakeven check using intra-bar high/low ג€” both are straightforward to vectorize with pandas shift and cummax/cummin.",
     "converted_at": "2026-03-05T08:28:40.661030+00:00",
     "output_dir": "output\\all_day_futures_scalper_ema_trend_cross_atr_brackets\\2026-03-05_08-24-12",
     "archived_at": "2026-03-14T19:22:40.291872+00:00"
@@ -30,7 +30,7 @@
     },
     "btc_score": 4,
     "project_score": 4,
-    "recommendation_reason": "Dual Kaufman Adaptive Moving Average crossover with ATR-based SL/TP. KAMA's noise-filtering adapts naturally to BTC's alternating trend/chop regimes, making it a solid fit for crypto (btc_score 4). Conversion is straightforward: KAMA must be implemented in pure Python from the efficiency-ratio formula since TA-Lib's KAMA uses a single period and won't match TVta.kama(src, erLen, fastLen, slowLen); ATR, crossover/crossunder, and SL/TP logic are all direct pandas translations. No MTF resampling, no forbidden functions, and the entry/exit conditions are clean and unambiguous. Main risk is ensuring the KAMA recurrence calculation is numerically identical to TradingView's — requires careful seeding and the correct smoothing-constant formula. Overall a well-structured, medium-complexity conversion candidate (project_score 4).",
+    "recommendation_reason": "Dual Kaufman Adaptive Moving Average crossover with ATR-based SL/TP. KAMA's noise-filtering adapts naturally to BTC's alternating trend/chop regimes, making it a solid fit for crypto (btc_score 4). Conversion is straightforward: KAMA must be implemented in pure Python from the efficiency-ratio formula since TA-Lib's KAMA uses a single period and won't match TVta.kama(src, erLen, fastLen, slowLen); ATR, crossover/crossunder, and SL/TP logic are all direct pandas translations. No MTF resampling, no forbidden functions, and the entry/exit conditions are clean and unambiguous. Main risk is ensuring the KAMA recurrence calculation is numerically identical to TradingView's ג€” requires careful seeding and the correct smoothing-constant formula. Overall a well-structured, medium-complexity conversion candidate (project_score 4).",
     "converted_at": "2026-03-11T14:23:01.263024+00:00",
     "output_dir": "output\\kama_trend_strategy\\2026-03-11_14-18-23",
     "archived_at": "2026-03-14T19:22:40.291872+00:00"
@@ -48,7 +48,7 @@
     },
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Evaluation failed — scored 0.",
+    "recommendation_reason": "Evaluation failed ג€” scored 0.",
     "archived_at": "2026-03-11T14:23:01.265023+00:00"
   },
   "NEW-TOTT-Strategy.pine": {
@@ -64,7 +64,7 @@
     },
     "btc_score": 3,
     "project_score": 3,
-    "recommendation_reason": "Twin OTT (Optimized Trend Tracker) strategy using a configurable moving average (13 types) with adaptive trailing stop bands for signal generation. Core logic is trend-following and suits BTC's directional moves, but the coefficient-based twin bands (OTTup/OTTdn) are very narrow by default (0.001), which may cause frequent whipsaws on a volatile asset. Conversion complexity is moderate: VAR, WWMA, ZLEMA, TSF, DEMA, HMA each require custom Pandas implementations; the recursive longStop/shortStop/dir state requires careful pandas iteration or cumulative logic; and the breakeven + multi-TP risk management (all disabled by default) adds optional but substantial complexity. The core signal path (MA → OTT bands → crossover entries) is clean and well-scoped for conversion without the optional risk management layer.",
+    "recommendation_reason": "Twin OTT (Optimized Trend Tracker) strategy using a configurable moving average (13 types) with adaptive trailing stop bands for signal generation. Core logic is trend-following and suits BTC's directional moves, but the coefficient-based twin bands (OTTup/OTTdn) are very narrow by default (0.001), which may cause frequent whipsaws on a volatile asset. Conversion complexity is moderate: VAR, WWMA, ZLEMA, TSF, DEMA, HMA each require custom Pandas implementations; the recursive longStop/shortStop/dir state requires careful pandas iteration or cumulative logic; and the breakeven + multi-TP risk management (all disabled by default) adds optional but substantial complexity. The core signal path (MA ג†’ OTT bands ג†’ crossover entries) is clean and well-scoped for conversion without the optional risk management layer.",
     "converted_at": "2026-03-14T14:30:50.959232+00:00",
     "output_dir": "output\\new_tott_strategy\\2026-03-14_14-21-20",
     "archived_at": "2026-03-14T19:22:40.295422+00:00"
@@ -82,14 +82,14 @@
     },
     "btc_score": 3,
     "project_score": 3,
-    "recommendation_reason": "Pring's Special K is a well-known composite momentum oscillator designed for macro trend-following — a reasonable fit for BTC on daily timeframes where it can capture multi-week swings. The zero-line and slope filters reduce noise, and ATR-based stops/targets provide structured risk management. However, the critical challenge for conversion is the `import TradingView/ta/11 as TVta` library call: `TVta.specialK()` must be reverse-engineered from Pring's original formula (a weighted sum of multiple ROC periods each smoothed by different MAs), which adds significant implementation complexity. The 724-bar minimum history requirement and dual signal-line smoothing (len1, len2 both defaulting to 100) also push lookback requirements high. The strategy is clean and well-structured, but the dependency on an opaque TradingView library function makes it a medium-difficulty conversion with meaningful research overhead.",
+    "recommendation_reason": "Pring's Special K is a well-known composite momentum oscillator designed for macro trend-following ג€” a reasonable fit for BTC on daily timeframes where it can capture multi-week swings. The zero-line and slope filters reduce noise, and ATR-based stops/targets provide structured risk management. However, the critical challenge for conversion is the `import TradingView/ta/11 as TVta` library call: `TVta.specialK()` must be reverse-engineered from Pring's original formula (a weighted sum of multiple ROC periods each smoothed by different MAs), which adds significant implementation complexity. The 724-bar minimum history requirement and dual signal-line smoothing (len1, len2 both defaulting to 100) also push lookback requirements high. The strategy is clean and well-structured, but the dependency on an opaque TradingView library function makes it a medium-difficulty conversion with meaningful research overhead.",
     "converted_at": "2026-03-14T16:38:47.292334+00:00",
     "output_dir": "output\\special_k_strategy\\2026-03-14_16-33-37",
     "archived_at": "2026-03-14T19:22:40.295422+00:00"
   },
   "TASC-2026-03-One-Percent-A-Week.pine": {
     "file_path": "archive\\TASC-2026-03-One-Percent-A-Week\\TASC-2026-03-One-Percent-A-Week.pine",
-    "status": "archived",
+    "status": "completed",
     "registered_at": "2026-03-14T14:20:57.446767+00:00",
     "scrape_source": "editors_pick",
     "evaluated_at": "2026-03-14T14:21:20.685233+00:00",
@@ -101,11 +101,13 @@
     },
     "btc_score": 1,
     "project_score": 3,
-    "recommendation_reason": "Strategy is purpose-built for TQQQ (leveraged US equity ETF) and anchors entirely on US stock market session structure: Monday first-bar weekly open, Friday last-bar hard exit, and session.isfirstbar_regular/islastbar_regular guards. BTC trades 24/7 with no such session boundaries, making the core timing logic inapplicable without fundamental redesign. Project fit is moderate — the logic is clean and well-structured, but conversion complexity is high due to limit-order-across-day sequencing, OCA bracket management, and session-aware state machines (sendPT/beSent flags). A Python port would require simulating multi-day pending limit orders and session boundaries, which goes well beyond standard vectorized backtesting. Recommended only if the team wants to explore weekly mean-reversion patterns adapted for crypto (e.g., using Monday UTC open as proxy).",
-    "skip_count": 1,
-    "archived_at": "2026-04-05T05:42:32.312169+00:00",
+    "recommendation_reason": "Strategy is purpose-built for TQQQ (leveraged US equity ETF) and anchors entirely on US stock market session structure: Monday first-bar weekly open, Friday last-bar hard exit, and session.isfirstbar_regular/islastbar_regular guards. BTC trades 24/7 with no such session boundaries, making the core timing logic inapplicable without fundamental redesign. Project fit is moderate ג€” the logic is clean and well-structured, but conversion complexity is high due to limit-order-across-day sequencing, OCA bracket management, and session-aware state machines (sendPT/beSent flags). A Python port would require simulating multi-day pending limit orders and session boundaries, which goes well beyond standard vectorized backtesting. Recommended only if the team wants to explore weekly mean-reversion patterns adapted for crypto (e.g., using Monday UTC open as proxy).",
+    "skip_count": 0,
+    "archived_at": "2026-04-05T10:23:23.045097+00:00",
     "conversion_attempts": 1,
-    "failed_at": "2026-04-05T05:14:24.480860+00:00"
+    "failed_at": "2026-04-05T05:14:24.480860+00:00",
+    "converted_at": "2026-04-05T10:23:23.045097+00:00",
+    "output_dir": "output\\tasc_2026_03_one_percent_a_week\\2026-04-05_10-13-46"
   },
   "zz-shot.pine": {
     "file_path": "archive\\zz-shot.pine",
@@ -121,7 +123,7 @@
     },
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Evaluation failed — scored 0.",
+    "recommendation_reason": "Evaluation failed ג€” scored 0.",
     "archived_at": "2026-03-14T14:30:50.962746+00:00"
   },
   "APEX-V2-JOAT.pine": {
@@ -138,7 +140,7 @@
     },
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Evaluation failed — scored 0.",
+    "recommendation_reason": "Evaluation failed ג€” scored 0.",
     "archived_at": "2026-03-14T16:38:47.295374+00:00"
   },
   "Rudy-Breakout-Momentum-v2.pine": {
@@ -155,7 +157,7 @@
     },
     "btc_score": 2,
     "project_score": 4,
-    "recommendation_reason": "Explicitly designed for large/mid-cap momentum stocks (NVDA, AMZN, GOOGL, etc.), so BTC fit is weak — breakout logic and 8%/15% stop/target params are tuned for equities, not crypto volatility. Project fit is strong: clean Pine v6 code, only standard indicators (EMA, RSI, ta.highest), no MTF complexity, no custom indicators, and the lookahead guard (high126[1]) is already correct. Straightforward to transpile.",
+    "recommendation_reason": "Explicitly designed for large/mid-cap momentum stocks (NVDA, AMZN, GOOGL, etc.), so BTC fit is weak ג€” breakout logic and 8%/15% stop/target params are tuned for equities, not crypto volatility. Project fit is strong: clean Pine v6 code, only standard indicators (EMA, RSI, ta.highest), no MTF complexity, no custom indicators, and the lookahead guard (high126[1]) is already correct. Straightforward to transpile.",
     "converted_at": "2026-03-14T18:05:46.962651+00:00",
     "output_dir": "output\\rudy_breakout_momentum_v2\\2026-03-14_17-55-43",
     "archived_at": "2026-03-14T19:22:40.295422+00:00"
@@ -174,7 +176,7 @@
     },
     "btc_score": 3,
     "project_score": 3,
-    "recommendation_reason": "Custom SuperTrend with noise-avoidance logic (ATR-based threshold + expansion alpha). Clean entry/exit via trend change detection. Configurable source input adds flexibility. Logic is straightforward to vectorize: ATR bands, iterative trend tracking, and noise gate can all be expressed in pandas/numpy loops or using talib.ATR. Main challenge is the stateful trend variable requiring a forward loop, but no MTF or complex dependencies. Mid-tier BTC score due to no filters (volume, RSI, etc.) and always-in-market long/short entries, which may underperform in choppy BTC conditions. Project score is moderate — good complexity for conversion but lacks risk management hooks.",
+    "recommendation_reason": "Custom SuperTrend with noise-avoidance logic (ATR-based threshold + expansion alpha). Clean entry/exit via trend change detection. Configurable source input adds flexibility. Logic is straightforward to vectorize: ATR bands, iterative trend tracking, and noise gate can all be expressed in pandas/numpy loops or using talib.ATR. Main challenge is the stateful trend variable requiring a forward loop, but no MTF or complex dependencies. Mid-tier BTC score due to no filters (volume, RSI, etc.) and always-in-market long/short entries, which may underperform in choppy BTC conditions. Project score is moderate ג€” good complexity for conversion but lacks risk management hooks.",
     "converted_at": "2026-03-16T11:50:44.571665+00:00",
     "archived_at": "2026-03-16T11:50:44.571665+00:00",
     "output_dir": "output\\evasive_super_trend_strategy_source_select\\2026-03-16_11-45-59"
@@ -193,7 +195,7 @@
     },
     "btc_score": 0,
     "project_score": 1,
-    "recommendation_reason": "This is not a trading strategy — it is a CSV trade importer/replayer that reads user-pasted transactions and places corresponding orders on the chart for visualization purposes. It contains zero signal generation logic, no technical indicators, and no entry/exit rules. The core mechanism (parsing a text_area input and replaying historical trades by timestamp) has no meaningful mapping to the BaseStrategy contract (run(df, timestamp) -> StrategyRecommendation). Conversion would produce an empty or trivially useless strategy file. Strongly recommend archiving.",
+    "recommendation_reason": "This is not a trading strategy ג€” it is a CSV trade importer/replayer that reads user-pasted transactions and places corresponding orders on the chart for visualization purposes. It contains zero signal generation logic, no technical indicators, and no entry/exit rules. The core mechanism (parsing a text_area input and replaying historical trades by timestamp) has no meaningful mapping to the BaseStrategy contract (run(df, timestamp) -> StrategyRecommendation). Conversion would produce an empty or trivially useless strategy file. Strongly recommend archiving.",
     "archived_at": "2026-03-16T08:36:05.863276+00:00"
   },
   "TrendMaster-Pro-2-3-with-Alerts.pine": {
@@ -210,7 +212,7 @@
     },
     "btc_score": 3,
     "project_score": 3,
-    "recommendation_reason": "Multi-indicator MA crossover strategy (9/21 cross) with 6 confirmation filters (RSI, MACD, Stochastic, ADX, Bollinger Bands, trend MA). Core signal logic is clean and well-structured, making the trading logic extractable. However, several conversion challenges reduce scores: (1) request.security() is called with lookahead_on=true — a direct lookahead bias violation that must be remediated; (2) complex per-session trade counters and TP/SL hit limits rely on broker state (strategy.closedtrades, strategy.position_size) that requires careful simulation; (3) session-based trading logic (Asia/London/NY sessions) is less meaningful for 24/7 BTC markets, reducing BTC suitability; (4) Pine Script v6 features (input.enum, enum types) require translation. Visual/drawing components (pivot S/R lines, fill plots, session backgrounds) are purely cosmetic and can be ignored. The strategy is convertible but requires non-trivial state management work.",
+    "recommendation_reason": "Multi-indicator MA crossover strategy (9/21 cross) with 6 confirmation filters (RSI, MACD, Stochastic, ADX, Bollinger Bands, trend MA). Core signal logic is clean and well-structured, making the trading logic extractable. However, several conversion challenges reduce scores: (1) request.security() is called with lookahead_on=true ג€” a direct lookahead bias violation that must be remediated; (2) complex per-session trade counters and TP/SL hit limits rely on broker state (strategy.closedtrades, strategy.position_size) that requires careful simulation; (3) session-based trading logic (Asia/London/NY sessions) is less meaningful for 24/7 BTC markets, reducing BTC suitability; (4) Pine Script v6 features (input.enum, enum types) require translation. Visual/drawing components (pivot S/R lines, fill plots, session backgrounds) are purely cosmetic and can be ignored. The strategy is convertible but requires non-trivial state management work.",
     "converted_at": "2026-03-17T14:03:22.911309+00:00",
     "archived_at": "2026-03-17T14:03:22.911309+00:00",
     "output_dir": "output\\trendmaster_pro_2_3_with_alerts\\2026-03-17_13-55-12"
@@ -229,7 +231,7 @@
     },
     "btc_score": 4,
     "project_score": 3,
-    "recommendation_reason": "Classic double top/bottom pattern recognition strategy with configurable pivot detection, Fib-based targets, and optional ATR trailing stop — all well-suited for BTC's trending and reversal behavior. Core algorithm (pivot matrix tracking, pattern matching, level calculation) is deterministic and translatable to pandas/numpy. Main conversion challenges: the rolling 5-row matrix for pivot state, stateful direction tracking, and the _double/_scan/_inTrade chain of closures that carry persistent flags — all require careful vectorized re-implementation. Visual and alert-string code (lines, labels, linefill, JSON formatters for 3Commas/Alertatron/Discord) can be dropped entirely. Medium-high complexity but well-scoped logic makes it a solid conversion candidate.",
+    "recommendation_reason": "Classic double top/bottom pattern recognition strategy with configurable pivot detection, Fib-based targets, and optional ATR trailing stop ג€” all well-suited for BTC's trending and reversal behavior. Core algorithm (pivot matrix tracking, pattern matching, level calculation) is deterministic and translatable to pandas/numpy. Main conversion challenges: the rolling 5-row matrix for pivot state, stateful direction tracking, and the _double/_scan/_inTrade chain of closures that carry persistent flags ג€” all require careful vectorized re-implementation. Visual and alert-string code (lines, labels, linefill, JSON formatters for 3Commas/Alertatron/Discord) can be dropped entirely. Medium-high complexity but well-scoped logic makes it a solid conversion candidate.",
     "converted_at": "2026-03-16T08:36:05.861275+00:00",
     "archived_at": "2026-03-16T08:36:05.861275+00:00",
     "output_dir": "output\\bjorgum_double_tap\\2026-03-16_08-30-31"
@@ -268,7 +270,7 @@
     },
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Evaluation failed — scored 0.",
+    "recommendation_reason": "Evaluation failed ג€” scored 0.",
     "archived_at": "2026-03-16T11:50:44.573661+00:00"
   },
   "AI-Brain-RSI-Structure-Tracker.pine": {
@@ -285,7 +287,7 @@
     },
     "btc_score": 4,
     "project_score": 3,
-    "recommendation_reason": "Solid multi-condition strategy combining RSI crossovers, SMA trend filter (50/200), and market structure (HH/HL/LL/LH via pivot points) with ATR-based dynamic exits. BTC score is high because RSI+SMA200 trend filtering works well on BTC's trending nature, and the 3:1 ATR TP:SL ratio is reasonable. Project score is moderate: the pivot-based structure detection introduces lookahead bias risk (ta.pivothigh uses future bars by design in Pine — offset by structLookback), which requires careful handling during conversion. The label drawing code is purely visual and can be dropped. The trendState stateful variable updated by pivot logic is the main complexity; it must be correctly reconstructed in pandas using a rolling pivot detection approach. No exotic indicators — RSI, SMA, ATR are all standard TA-Lib. Overall a good candidate but requires careful anti-lookahead handling for the pivot logic."
+    "recommendation_reason": "Solid multi-condition strategy combining RSI crossovers, SMA trend filter (50/200), and market structure (HH/HL/LL/LH via pivot points) with ATR-based dynamic exits. BTC score is high because RSI+SMA200 trend filtering works well on BTC's trending nature, and the 3:1 ATR TP:SL ratio is reasonable. Project score is moderate: the pivot-based structure detection introduces lookahead bias risk (ta.pivothigh uses future bars by design in Pine ג€” offset by structLookback), which requires careful handling during conversion. The label drawing code is purely visual and can be dropped. The trendState stateful variable updated by pivot logic is the main complexity; it must be correctly reconstructed in pandas using a rolling pivot detection approach. No exotic indicators ג€” RSI, SMA, ATR are all standard TA-Lib. Overall a good candidate but requires careful anti-lookahead handling for the pivot logic."
   },
   "Template-Trailing-Strategy-Backtester.pine": {
     "file_path": "archive\\Template-Trailing-Strategy-Backtester.pine",
@@ -301,7 +303,7 @@
     },
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Evaluation failed — scored 0.",
+    "recommendation_reason": "Evaluation failed ג€” scored 0.",
     "archived_at": "2026-03-17T14:03:22.913393+00:00"
   },
   "3Commas-Bot.pine": {
@@ -318,7 +320,7 @@
     },
     "btc_score": 3,
     "project_score": 3,
-    "recommendation_reason": "Standard dual-MA crossover with ATR-based swing stops and configurable R:R targets. Core logic is straightforward and BTC-compatible, but several factors complicate conversion: (1) stateful trailing stop uses `var` variables that update conditionally each bar — hard to fully vectorize; (2) HEMA type requires recursive Heikin-Ashi open calculation; (3) T3 and DEMA MA types need manual implementation; (4) 3Commas webhook alert messages are irrelevant noise and should be ignored; (5) `barstate.isconfirmed` can be treated as always True in backtesting; (6) `strategy.risk.max_drawdown` has no direct Python equivalent. Safe name '3commas_bot' starts with a digit — Python module will need a prefix (e.g., '_3commas_bot' or 'three_commas_bot'). Combined score 6/10 — convertible but requires careful handling of stateful exit logic.",
+    "recommendation_reason": "Standard dual-MA crossover with ATR-based swing stops and configurable R:R targets. Core logic is straightforward and BTC-compatible, but several factors complicate conversion: (1) stateful trailing stop uses `var` variables that update conditionally each bar ג€” hard to fully vectorize; (2) HEMA type requires recursive Heikin-Ashi open calculation; (3) T3 and DEMA MA types need manual implementation; (4) 3Commas webhook alert messages are irrelevant noise and should be ignored; (5) `barstate.isconfirmed` can be treated as always True in backtesting; (6) `strategy.risk.max_drawdown` has no direct Python equivalent. Safe name '3commas_bot' starts with a digit ג€” Python module will need a prefix (e.g., '_3commas_bot' or 'three_commas_bot'). Combined score 6/10 ג€” convertible but requires careful handling of stateful exit logic.",
     "converted_at": "2026-03-20T13:36:05.621976+00:00",
     "archived_at": "2026-03-20T13:36:05.621976+00:00",
     "output_dir": "output\\3commas_bot\\2026-03-20_13-31-29"
@@ -337,7 +339,7 @@
     },
     "btc_score": 2,
     "project_score": 4,
-    "recommendation_reason": "Classic NY Opening Range Breakout on 15m bars. Logic is clean and well-scoped: build the OR during the 09:30–09:45 ET session, enter on N consecutive closes beyond the range, exit via configurable ATR/RR stop+target or EOD close. One trade per day cap keeps it simple. High project_score: ATR is TA-Lib native, the day-of-week and session-time filters translate cleanly to pandas datetime ops, and the drawing code (boxes/lines) is purely visual and can be dropped. Low BTC score: the strategy is tightly coupled to NYSE market-open timing and intraday session structure — applying it to 24/7 BTC would make the 09:30 ET session arbitrary and strip the edge entirely.",
+    "recommendation_reason": "Classic NY Opening Range Breakout on 15m bars. Logic is clean and well-scoped: build the OR during the 09:30ג€“09:45 ET session, enter on N consecutive closes beyond the range, exit via configurable ATR/RR stop+target or EOD close. One trade per day cap keeps it simple. High project_score: ATR is TA-Lib native, the day-of-week and session-time filters translate cleanly to pandas datetime ops, and the drawing code (boxes/lines) is purely visual and can be dropped. Low BTC score: the strategy is tightly coupled to NYSE market-open timing and intraday session structure ג€” applying it to 24/7 BTC would make the 09:30 ET session arbitrary and strip the edge entirely.",
     "converted_at": "2026-03-21T11:16:27.083675+00:00",
     "archived_at": "2026-03-21T11:16:27.083675+00:00",
     "output_dir": "output\\ny15m_orb_with_a_fixed_sl_tp_nasdaq\\2026-03-21_11-07-35"
@@ -356,7 +358,7 @@
     },
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Evaluation failed — scored 0.",
+    "recommendation_reason": "Evaluation failed ג€” scored 0.",
     "skip_count": 1,
     "archived_at": "2026-03-21T11:16:27.085673+00:00"
   },
@@ -374,7 +376,7 @@
     },
     "btc_score": 2,
     "project_score": 3,
-    "recommendation_reason": "PineScript v4 pivot-reversal strategy with a large monthly-returns display table (~60% of code) that is pure visualization and irrelevant to signal generation. Core trading logic is simple pivot-high/low breakout entries using stop orders, which complicates conversion since our framework emits signals only, not order types. pivothigh/pivotlow need custom implementations. The strategy itself is very basic — no filters, no exits beyond reversals, no risk management — limiting its value for BTC trading. Combined score 5 meets the minimum threshold but offers little alpha.",
+    "recommendation_reason": "PineScript v4 pivot-reversal strategy with a large monthly-returns display table (~60% of code) that is pure visualization and irrelevant to signal generation. Core trading logic is simple pivot-high/low breakout entries using stop orders, which complicates conversion since our framework emits signals only, not order types. pivothigh/pivotlow need custom implementations. The strategy itself is very basic ג€” no filters, no exits beyond reversals, no risk management ג€” limiting its value for BTC trading. Combined score 5 meets the minimum threshold but offers little alpha.",
     "skip_count": 0,
     "archived_at": "2026-04-04T22:46:02.600929+00:00",
     "converted_at": "2026-04-04T22:46:02.600929+00:00",
@@ -394,7 +396,7 @@
     },
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Evaluation failed — scored 0.",
+    "recommendation_reason": "Evaluation failed ג€” scored 0.",
     "skip_count": 1,
     "archived_at": "2026-03-21T11:31:54.962578+00:00"
   },
@@ -405,7 +407,7 @@
     "scrape_source": "editors_pick",
     "evaluated_at": "2026-03-24T17:10:31.577853+00:00",
     "pine_metadata": {
-      "name": "Сalculation a position size based on risk",
+      "name": "׀¡alculation a position size based on risk",
       "safe_name": "calculation_a_position_size_based_on_risk",
       "timeframe": "default",
       "lookback_bars": 444
@@ -413,7 +415,7 @@
     "category": "Educational",
     "btc_score": 1,
     "project_score": 1,
-    "recommendation_reason": "Purely educational script demonstrating position sizing math. Entries are random (bar_index % 333 / % 444) with no signal logic, indicators, or market structure. Only 7 trades in backtest confirms this is not a real strategy. Nothing meaningful to transpile for the RL engine — no feature extractors, no trend/momentum/volatility signals. Archive immediately.",
+    "recommendation_reason": "Purely educational script demonstrating position sizing math. Entries are random (bar_index % 333 / % 444) with no signal logic, indicators, or market structure. Only 7 trades in backtest confirms this is not a real strategy. Nothing meaningful to transpile for the RL engine ג€” no feature extractors, no trend/momentum/volatility signals. Archive immediately.",
     "skip_count": 1,
     "archived_at": "2026-03-24T17:24:42.197559+00:00"
   },
@@ -432,7 +434,7 @@
     "category": "Trend",
     "btc_score": 5,
     "project_score": 7,
-    "recommendation_reason": "Simple two-indicator system (HMA-32 + ATR-14 noise filter) with clean long/short entries and a cross-based exit. No MTF, no request.security, and fully vectorizable without lookahead risk. The HMA is straightforward to implement via pandas WMA chains with pd.Series.shift() for the [1] bar lookback. Transpilation complexity is low. BTC score is moderate: Sharpe of 0.096 is very weak, 1624 trades indicates overtrading, and the backtest was on ETH 4H not BTC — cross-asset generalization is unverified. Project score is solid due to architectural simplicity and zero MTF dependency.",
+    "recommendation_reason": "Simple two-indicator system (HMA-32 + ATR-14 noise filter) with clean long/short entries and a cross-based exit. No MTF, no request.security, and fully vectorizable without lookahead risk. The HMA is straightforward to implement via pandas WMA chains with pd.Series.shift() for the [1] bar lookback. Transpilation complexity is low. BTC score is moderate: Sharpe of 0.096 is very weak, 1624 trades indicates overtrading, and the backtest was on ETH 4H not BTC ג€” cross-asset generalization is unverified. Project score is solid due to architectural simplicity and zero MTF dependency.",
     "converted_at": "2026-03-24T17:24:42.186632+00:00",
     "archived_at": "2026-03-24T17:24:42.186632+00:00",
     "output_dir": "output\\aleks_du_zero_lag_pro_safe_mode\\2026-03-24_17-11-15"
@@ -452,7 +454,7 @@
     "category": "Oscillator",
     "btc_score": 1,
     "project_score": 1,
-    "recommendation_reason": "Explicitly educational script demonstrating leverage/margin mechanics, not a viable trading strategy. Backtest metrics are catastrophic: profit_factor 0.994 (net losing), max_drawdown 94.64%, sharpe 0.112. Uses PineScript v4 stochastic crossover with 3000% equity sizing to simulate 30:1 leverage — the extreme position sizing is intentional for demo purposes and would be destructive in production. No conversion value for the RL engine.",
+    "recommendation_reason": "Explicitly educational script demonstrating leverage/margin mechanics, not a viable trading strategy. Backtest metrics are catastrophic: profit_factor 0.994 (net losing), max_drawdown 94.64%, sharpe 0.112. Uses PineScript v4 stochastic crossover with 3000% equity sizing to simulate 30:1 leverage ג€” the extreme position sizing is intentional for demo purposes and would be destructive in production. No conversion value for the RL engine.",
     "skip_count": 1,
     "archived_at": "2026-03-24T17:24:42.198558+00:00"
   },
@@ -471,7 +473,7 @@
     "category": "Trend",
     "btc_score": 1,
     "project_score": 4,
-    "recommendation_reason": "Disqualified on backtest fundamentals: max_drawdown of 767% is catastrophic and renders the 2.174 profit_factor meaningless; negative Sharpe (-0.136) and only 8 total trades provide zero statistical confidence. Critically, the advertised Neural Stability Filter (is_con) is wired only to barcolor and never gates strategy.entry calls — signals fire unconditionally, meaning the core selling point is decorative. EMA(1) as the crossover source is mathematically identical to close, adding no signal quality. Moderate project value: the ATR trailing-stop (Chandelier Exit variant) and Hull MA helper are well-scoped transpilation targets, but the garbled Cyrillic parameter labels complicate clean variable mapping, and the stateful var ts requires careful shift-based vectorization to avoid lookahead bias. Not worth pipeline capacity given the fundamental signal logic flaw.",
+    "recommendation_reason": "Disqualified on backtest fundamentals: max_drawdown of 767% is catastrophic and renders the 2.174 profit_factor meaningless; negative Sharpe (-0.136) and only 8 total trades provide zero statistical confidence. Critically, the advertised Neural Stability Filter (is_con) is wired only to barcolor and never gates strategy.entry calls ג€” signals fire unconditionally, meaning the core selling point is decorative. EMA(1) as the crossover source is mathematically identical to close, adding no signal quality. Moderate project value: the ATR trailing-stop (Chandelier Exit variant) and Hull MA helper are well-scoped transpilation targets, but the garbled Cyrillic parameter labels complicate clean variable mapping, and the stateful var ts requires careful shift-based vectorization to avoid lookahead bias. Not worth pipeline capacity given the fundamental signal logic flaw.",
     "skip_count": 1,
     "failed_at": "2026-03-30T14:24:16.600205+00:00",
     "archived_at": "2026-04-04T22:46:02.605928+00:00"
@@ -491,7 +493,7 @@
     "category": "Trend",
     "btc_score": 5,
     "project_score": 2,
-    "recommendation_reason": "Keltner Channel breakout core with Kelly ratio dynamic position sizing. The defining feature — Kelly sizing — is computed entirely from runtime execution state: strategy.wintrades, strategy.closedtrades, strategy.grossprofit, strategy.grossloss, and strategy.equity. These are cumulative trade-engine variables that cannot be vectorized without simulating a full stateful trade loop, which is fundamentally incompatible with our lookahead-bias-free, vectorized pipeline. Stripping the Kelly logic reduces the strategy to a plain Keltner Channel breakout (indicator lookback: length=20, atr=10), which offers no unique value. Backtest metrics are weak: Sharpe 0.157 is near-zero risk-adjusted return and max drawdown 44.5% is high. Pine v4 (not v5) adds minor porting friction. Not recommended for conversion.",
+    "recommendation_reason": "Keltner Channel breakout core with Kelly ratio dynamic position sizing. The defining feature ג€” Kelly sizing ג€” is computed entirely from runtime execution state: strategy.wintrades, strategy.closedtrades, strategy.grossprofit, strategy.grossloss, and strategy.equity. These are cumulative trade-engine variables that cannot be vectorized without simulating a full stateful trade loop, which is fundamentally incompatible with our lookahead-bias-free, vectorized pipeline. Stripping the Kelly logic reduces the strategy to a plain Keltner Channel breakout (indicator lookback: length=20, atr=10), which offers no unique value. Backtest metrics are weak: Sharpe 0.157 is near-zero risk-adjusted return and max drawdown 44.5% is high. Pine v4 (not v5) adds minor porting friction. Not recommended for conversion.",
     "converted_at": "2026-03-25T07:56:05.835164+00:00",
     "archived_at": "2026-03-25T07:56:05.835164+00:00",
     "output_dir": "output\\built_in_kelly_ratio_for_dynamic_position_sizing\\2026-03-25_07-48-31"
@@ -530,7 +532,7 @@
     "category": "Other",
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Evaluation failed — scored 0.",
+    "recommendation_reason": "Evaluation failed ג€” scored 0.",
     "skip_count": 1,
     "archived_at": "2026-03-25T07:56:05.838165+00:00"
   },
@@ -710,7 +712,7 @@
     "category": "OrderFlow",
     "btc_score": 1,
     "project_score": 3,
-    "recommendation_reason": "Catastrophic backtest metrics disqualify this strategy: max drawdown of 944% signals near-total capital destruction, Sharpe of -0.104 is sub-cash, and profit factor of 1.248 offers negligible edge over 279 trades. The core mechanic relies on request.security_lower_tf returning per-bar arrays of 1m closes/opens to compute intra-bar footprint delta bins — this is PineScript-specific intra-bar data that cannot be faithfully replicated from standard OHLCV candles, making accurate transpilation impractical. The threshold-only entry logic (no EMA50 filter present in code despite description) is too simplistic to produce reliable RL features. Recommend skip/archive.",
+    "recommendation_reason": "Catastrophic backtest metrics disqualify this strategy: max drawdown of 944% signals near-total capital destruction, Sharpe of -0.104 is sub-cash, and profit factor of 1.248 offers negligible edge over 279 trades. The core mechanic relies on request.security_lower_tf returning per-bar arrays of 1m closes/opens to compute intra-bar footprint delta bins ג€” this is PineScript-specific intra-bar data that cannot be faithfully replicated from standard OHLCV candles, making accurate transpilation impractical. The threshold-only entry logic (no EMA50 filter present in code despite description) is too simplistic to produce reliable RL features. Recommend skip/archive.",
     "skip_count": 5,
     "archived_at": "2026-04-04T22:46:02.605928+00:00"
   },
@@ -750,7 +752,7 @@
     "category": "Mean Reversion",
     "btc_score": 1,
     "project_score": 3,
-    "recommendation_reason": "Critically low BTC score: gap-filling logic depends on intraday session open/close gaps (stock market microstructure) that do not exist on 24/7 crypto markets — `change(time('D'))` detects a daily boundary but BTC never halts, so opening gaps are structurally absent and the core signal produces near-zero meaningful triggers. Project score is limited by a Sharpe of -49.29 (deeply negative risk-adjusted return) and a barely-above-unity profit factor of 1.117, indicating the strategy destroys value on risk-adjusted terms. Additional transpilation complexity comes from PineScript v4 syntax, the `valuewhen` function (no direct pandas equivalent), and session-aware order routing (`strategy.close_all` with conditional `ses` gating) that adds surface area for lookahead bugs. Not recommended for selection.",
+    "recommendation_reason": "Critically low BTC score: gap-filling logic depends on intraday session open/close gaps (stock market microstructure) that do not exist on 24/7 crypto markets ג€” `change(time('D'))` detects a daily boundary but BTC never halts, so opening gaps are structurally absent and the core signal produces near-zero meaningful triggers. Project score is limited by a Sharpe of -49.29 (deeply negative risk-adjusted return) and a barely-above-unity profit factor of 1.117, indicating the strategy destroys value on risk-adjusted terms. Additional transpilation complexity comes from PineScript v4 syntax, the `valuewhen` function (no direct pandas equivalent), and session-aware order routing (`strategy.close_all` with conditional `ses` gating) that adds surface area for lookahead bugs. Not recommended for selection.",
     "failed_at": "2026-04-02T15:25:56.357735+00:00",
     "archived_at": "2026-04-04T22:46:02.605928+00:00"
   },
@@ -770,7 +772,7 @@
     "category": "Grid/Mean-Reversion",
     "btc_score": 2,
     "project_score": 1,
-    "recommendation_reason": "Rejected on both dimensions. BTC score: Sharpe of -5.2 is catastrophically negative; the author explicitly labels this 'Don't trade me!' and frames the strategy as a cautionary example of martingale danger — not a viable trading system. Project score: The position sizing logic depends on `strategy.losstrades` and `strategy.wintrades`, which are live execution-state counters that accumulate across the backtest runtime. These cannot be vectorized into a stateless Pandas/TA-Lib feature extractor — there is no way to express 'how many consecutive losses occurred up to bar N' without a stateful loop, directly violating the RL anti-lookahead and vectorization contract. The baseline grid signal itself is trivially simple (1-bar lookback price band), offering near-zero RL informational value on its own. Do not convert.",
+    "recommendation_reason": "Rejected on both dimensions. BTC score: Sharpe of -5.2 is catastrophically negative; the author explicitly labels this 'Don't trade me!' and frames the strategy as a cautionary example of martingale danger ג€” not a viable trading system. Project score: The position sizing logic depends on `strategy.losstrades` and `strategy.wintrades`, which are live execution-state counters that accumulate across the backtest runtime. These cannot be vectorized into a stateless Pandas/TA-Lib feature extractor ג€” there is no way to express 'how many consecutive losses occurred up to bar N' without a stateful loop, directly violating the RL anti-lookahead and vectorization contract. The baseline grid signal itself is trivially simple (1-bar lookback price band), offering near-zero RL informational value on its own. Do not convert.",
     "skip_count": 5,
     "archived_at": "2026-04-04T22:46:02.605928+00:00"
   },
@@ -940,7 +942,7 @@
     "status": "evaluation_failed",
     "registered_at": "2026-04-02T15:56:14.610239+00:00",
     "scrape_source": "popular",
-    "evaluated_at": "2026-04-05T09:14:24.016118+00:00",
+    "evaluated_at": "2026-04-06T08:22:01.931771+00:00",
     "evaluation_status": "read_error",
     "pine_metadata": {
       "name": "ETH-Pro-Strategy-Long-Short-30m-V3-Alerts",
@@ -1050,7 +1052,7 @@
     "category": "Trend",
     "btc_score": 1,
     "project_score": 3,
-    "recommendation_reason": "Author explicitly states 'does not work well for other symbols low PF TBH' — this is a SOL-specific overfit. Sharpe of -0.017 is effectively negative, profit factor of 1.068 is barely above breakeven across 998 trades, making it a poor signal source for RL feature extraction. The code structure is clean (MTF via request.security, ATR exits, pullback logic) and transpilable, but the edge is too weak and symbol-specific to justify the MTF resampling overhead. Skip.",
+    "recommendation_reason": "Author explicitly states 'does not work well for other symbols low PF TBH' ג€” this is a SOL-specific overfit. Sharpe of -0.017 is effectively negative, profit factor of 1.068 is barely above breakeven across 998 trades, making it a poor signal source for RL feature extraction. The code structure is clean (MTF via request.security, ATR exits, pullback logic) and transpilable, but the edge is too weak and symbol-specific to justify the MTF resampling overhead. Skip.",
     "skip_count": 4,
     "archived_at": "2026-04-04T22:46:02.607929+00:00"
   },
@@ -1079,7 +1081,7 @@
     "status": "evaluation_failed",
     "registered_at": "2026-04-02T16:09:44.888483+00:00",
     "scrape_source": "popular",
-    "evaluated_at": "2026-04-05T09:14:24.019119+00:00",
+    "evaluated_at": "2026-04-06T08:22:01.935871+00:00",
     "evaluation_status": "read_error",
     "pine_metadata": {
       "name": "KFin-Huynh",
@@ -1169,7 +1171,7 @@
     "category": "Trend",
     "btc_score": 5,
     "project_score": 5,
-    "recommendation_reason": "Strong backtest metrics (PF 3.817, drawdown 8.32%) and crypto-native design (Hyperliquid, 0.05% commission) support a decent BTC score, but the Sharpe of 0.272 is weak for a 257-trade sample. Project score is penalized on four fronts: (1) the SFP detector relies on ta.pivothigh/ta.pivotlow with right-bar offsets — structurally lookahead-biased and non-trivially fixable in vectorized Python; (2) four ATR trailing modes use var float ratchet accumulators that require stateful row-by-row iteration, conflicting with the vectorization contract and making np.roll temptations likely; (3) ta.valuewhen calls are scattered throughout signal and stop logic, requiring careful stateful simulation; (4) the script is fundamentally an execution framework (webhook routing, bot-mode throttle, visual scaffolding, priority chains) rather than a signal-generating strategy — RL feature extraction value is low relative to transpilation complexity and risk.",
+    "recommendation_reason": "Strong backtest metrics (PF 3.817, drawdown 8.32%) and crypto-native design (Hyperliquid, 0.05% commission) support a decent BTC score, but the Sharpe of 0.272 is weak for a 257-trade sample. Project score is penalized on four fronts: (1) the SFP detector relies on ta.pivothigh/ta.pivotlow with right-bar offsets ג€” structurally lookahead-biased and non-trivially fixable in vectorized Python; (2) four ATR trailing modes use var float ratchet accumulators that require stateful row-by-row iteration, conflicting with the vectorization contract and making np.roll temptations likely; (3) ta.valuewhen calls are scattered throughout signal and stop logic, requiring careful stateful simulation; (4) the script is fundamentally an execution framework (webhook routing, bot-mode throttle, visual scaffolding, priority chains) rather than a signal-generating strategy ג€” RL feature extraction value is low relative to transpilation complexity and risk.",
     "failed_at": "2026-04-03T08:08:56.626233+00:00",
     "archived_at": "2026-04-04T22:46:02.607929+00:00"
   },
@@ -1329,7 +1331,7 @@
     "category": "Trend",
     "btc_score": 0,
     "project_score": 0,
-    "recommendation_reason": "Core Supertrend flip logic is asset-agnostic and transferable to BTC, but the strategy is explicitly designed for Indian equity options (CE/PE, ATM strike rounding, NIFTY/BANKNIFTY step sizes) which are meaningless on BTC spot/futures. The stateful trailing SL (var float with math.max/min updates gated on position_size) is challenging to vectorize without introducing lookahead bias — it requires a bar-by-bar simulation loop rather than a clean vectorized pass. Metrics are mixed: profit_factor of 1.282 and max_drawdown of 13% are acceptable, but a Sharpe of -1.495 is a significant red flag indicating risk-adjusted returns are poor. Convertible but yields a niche, low-alpha signal for the RL engine.",
+    "recommendation_reason": "Core Supertrend flip logic is asset-agnostic and transferable to BTC, but the strategy is explicitly designed for Indian equity options (CE/PE, ATM strike rounding, NIFTY/BANKNIFTY step sizes) which are meaningless on BTC spot/futures. The stateful trailing SL (var float with math.max/min updates gated on position_size) is challenging to vectorize without introducing lookahead bias ג€” it requires a bar-by-bar simulation loop rather than a clean vectorized pass. Metrics are mixed: profit_factor of 1.282 and max_drawdown of 13% are acceptable, but a Sharpe of -1.495 is a significant red flag indicating risk-adjusted returns are poor. Convertible but yields a niche, low-alpha signal for the RL engine.",
     "skip_count": 2,
     "archived_at": "2026-04-05T05:42:32.361375+00:00"
   },
@@ -1373,5 +1375,404 @@
     "converted_at": "2026-04-05T09:28:37.892410+00:00",
     "archived_at": "2026-04-05T09:28:37.892410+00:00",
     "output_dir": "output\\trend_pullback_momentum_side_aware\\2026-04-05_09-14-24"
+  },
+  "Delta-Volume-POC-Pro-Strategy-Multi-Session-MTF.pine": {
+    "file_path": "archive\\Delta-Volume-POC-Pro-Strategy-Multi-Session-MTF\\Delta-Volume-POC-Pro-Strategy-Multi-Session-MTF.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T09:50:51.951985+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:32:34.814279+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "Delta Volume & POC Pro Strategy - Multi-Session MTF",
+      "safe_name": "Delta_Volume___POC_Pro_Strategy___Multi_Session_MTF",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=67 is below the RL minimum of 150.",
+    "skip_count": 3,
+    "archived_at": "2026-04-05T11:05:37.972291+00:00"
+  },
+  "SMC-Fractal-Strategy-Jamol-v3.pine": {
+    "file_path": "archive\\SMC-Fractal-Strategy-Jamol-v3\\SMC-Fractal-Strategy-Jamol-v3.pine",
+    "status": "completed",
+    "registered_at": "2026-04-05T09:50:51.951985+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T09:51:19.803525+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "SMC Fractal Strategy [Jamol] v3",
+      "safe_name": "smc_fractal_strategy_jamol_v3",
+      "timeframe": "15m",
+      "lookback_bars": 500
+    },
+    "category": "Trend",
+    "btc_score": 1,
+    "project_score": 5,
+    "recommendation_reason": "Disqualifying backtest metrics: profit factor 0.765 (sub-1.0, net loser) and Sharpe ratio of -17.329 indicate the strategy destroys equity on a risk-adjusted basis. Despite a well-structured SMC concept (sweepג†’BOSג†’OB/FVG/Breaker sequence with HTF bias and session filters), the empirical performance makes it unsuitable for inclusion. Transpilation complexity is moderate-to-high due to request.security MTF dependency, multiple stateful zone arrays, and session time filtering.",
+    "converted_at": "2026-04-05T10:06:17.668229+00:00",
+    "archived_at": "2026-04-05T10:06:17.668229+00:00",
+    "output_dir": "output\\smc_fractal_strategy_jamol_v3\\2026-04-05_09-51-19"
+  },
+  "15-Min-ORB-Real-Version-MNQ.pine": {
+    "file_path": "archive\\15-Min-ORB-Real-Version-MNQ\\15-Min-ORB-Real-Version-MNQ.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T10:13:46.863817+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:13:46.881915+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "15-Min-ORB-Real-Version-MNQ",
+      "safe_name": "15_Min_ORB_Real_Version_MNQ",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=145 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-05T10:23:23.045097+00:00"
+  },
+  "Vortex-Nexus-Alpha-JOAT.pine": {
+    "file_path": "archive\\Vortex-Nexus-Alpha-JOAT\\Vortex-Nexus-Alpha-JOAT.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T10:13:46.863817+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:13:46.884909+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "Vortex Nexus Alpha [JOAT]",
+      "safe_name": "Vortex_Nexus_Alpha__JOAT",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "REJECTED: Script is an execution framework/automation bot (matched keyword: 'bot'). This is not a mathematical signal generator and cannot be transpiled for RL feature extraction.",
+    "skip_count": 1,
+    "archived_at": "2026-04-05T10:23:23.060927+00:00"
+  },
+  "SPY-Daily-Timeframe-20-CAGR-High-Risk-High-Reward.pine": {
+    "file_path": "archive\\SPY-Daily-Timeframe-20-CAGR-High-Risk-High-Reward\\SPY-Daily-Timeframe-20-CAGR-High-Risk-High-Reward.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T10:32:34.799277+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:32:34.817278+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "21 / 75 EMA Cross - Filtered Long Only",
+      "safe_name": "21___75_EMA_Cross___Filtered_Long_Only",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=47 is below the RL minimum of 150.",
+    "skip_count": 2,
+    "archived_at": "2026-04-05T11:05:37.972291+00:00"
+  },
+  "Nifty-Institutional-Trend-Rider-om.pine": {
+    "file_path": "archive\\Nifty-Institutional-Trend-Rider-om\\Nifty-Institutional-Trend-Rider-om.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T10:38:46.818735+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:39:17.651363+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "Nifty Institutional Trend Rider",
+      "safe_name": "nifty_institutional_trend_rider_om",
+      "timeframe": "15m",
+      "lookback_bars": 20
+    },
+    "category": "Trend",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Simple RSI+EMA+VWAP trend-following logic with trailing stop. Weak backtest stats (Sharpe 0.374, PF 1.262) and designed for Indian equity index (Nifty), reducing BTC transferability. Main transpilation challenge is the stateful trailing stop that uses nz(longStopPrice[1]) recursive accumulation ג€” requires sequential loop or cummax pattern rather than pure vectorization. Session-anchored ta.vwap(close) also needs careful approximation in Python since crypto has no intraday session resets. Medium-difficulty conversion; no MTF, no complex math, but the stateful stop and VWAP approximation add risk of subtle lookahead bias if not handled carefully.",
+    "skip_count": 2,
+    "archived_at": "2026-04-05T11:05:37.972291+00:00"
+  },
+  "VWAP-Reclaim-LONG-ONLY.pine": {
+    "file_path": "archive\\VWAP-Reclaim-LONG-ONLY\\VWAP-Reclaim-LONG-ONLY.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T10:38:46.818735+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:39:38.497398+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "VWAP Squeeze Reclaim (LONG ONLY)",
+      "safe_name": "VWAP_Squeeze_Reclaim__LONG_ONLY",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=3 is below the RL minimum of 150.",
+    "skip_count": 2,
+    "archived_at": "2026-04-05T11:05:37.988631+00:00"
+  },
+  "EMA-Pullback-ADX-CVD-Divergence.pine": {
+    "file_path": "archive\\EMA-Pullback-ADX-CVD-Divergence\\EMA-Pullback-ADX-CVD-Divergence.pine",
+    "status": "completed",
+    "registered_at": "2026-04-05T10:50:09.529256+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:50:36.585874+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "EMA Pullback + ADX + CVD Divergence",
+      "safe_name": "ema_pullback_adx_cvd_divergence",
+      "timeframe": "unknown",
+      "lookback_bars": 20
+    },
+    "category": "Trend",
+    "btc_score": 2,
+    "project_score": 4,
+    "recommendation_reason": "Sharpe ratio of -5.804 and profit factor of 1.027 indicate essentially break-even performance with severely negative risk-adjusted returns. Strategy is explicitly designed for Nifty (Indian equities), limiting BTC applicability. Moderate transpilation complexity due to CVD cumulative delta, stateful var bool pullback flags, and divergence detection using shifted lowest/highest windows — but poor performance metrics do not justify conversion priority.",
+    "converted_at": "2026-04-05T11:05:37.956806+00:00",
+    "archived_at": "2026-04-05T11:05:37.956806+00:00",
+    "output_dir": "output\\ema_pullback_adx_cvd_divergence\\2026-04-05_10-50-59"
+  },
+  "HTF-EMA-Pullback-Strategy-Long-Short-FX-agnostic-cm.pine": {
+    "file_path": "archive\\HTF-EMA-Pullback-Strategy-Long-Short-FX-agnostic-cm\\HTF-EMA-Pullback-Strategy-Long-Short-FX-agnostic-cm.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T10:50:09.529256+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:50:36.588875+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "HTF EMA Pullback Strategy (Long & Short, FX-agnostic)",
+      "safe_name": "HTF_EMA_Pullback_Strategy__Long___Short__FX_agnostic",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: signal logic depends on self-evaluation state via `strategy.equity`.",
+    "skip_count": 1,
+    "archived_at": "2026-04-05T11:05:37.994798+00:00"
+  },
+  "Sensex-500-Point-Institutional-Breakout.pine": {
+    "file_path": "archive\\Sensex-500-Point-Institutional-Breakout\\Sensex-500-Point-Institutional-Breakout.pine",
+    "status": "completed",
+    "registered_at": "2026-04-05T10:50:09.529256+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T10:50:59.847810+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "Sensex 9:45 3-Trade Limit Breakout",
+      "safe_name": "sensex_500_point_institutional_breakout",
+      "timeframe": "5m",
+      "lookback_bars": 20
+    },
+    "category": "Breakout",
+    "btc_score": 2,
+    "project_score": 4,
+    "recommendation_reason": "India-specific Sensex strategy with hard-coded IST session windows (9:45–15:15) and 500-point round-number levels. BTC score is very low: the 24/7 market structure renders the session logic meaningless, and the 500-point increment is nonsensical for BTC price ranges. Project score is marginal: the breakout + break-even trailing SL logic is transpilable and the daily-reset state machine is interesting, but the heavy timezone/session dependency and Sensex-only calibration make the resulting Python strategy nearly useless outside its original context. Recommend skipping unless the pipeline needs a session-gated breakout example.",
+    "skip_count": 1,
+    "converted_at": "2026-04-05T11:30:26.139800+00:00",
+    "archived_at": "2026-04-05T11:30:26.139800+00:00",
+    "output_dir": "output\\sensex_500_point_institutional_breakout\\2026-04-05_11-24-20"
+  },
+  "Advanced-OB-HTF-FVG-Strategy-LJxV6.pine": {
+    "file_path": "archive\\Advanced-OB-HTF-FVG-Strategy-LJxV6\\Advanced-OB-HTF-FVG-Strategy-LJxV6.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T11:24:20.947248+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T11:24:20.959451+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "Advanced OB & HTF FVG Strategy",
+      "safe_name": "Advanced_OB___HTF_FVG_Strategy",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=77 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-05T11:30:26.147804+00:00"
+  },
+  "omnitrend-atr-scalper.pine": {
+    "file_path": "archive\\omnitrend-atr-scalper\\omnitrend-atr-scalper.pine",
+    "status": "archived",
+    "registered_at": "2026-04-05T11:24:20.947248+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T11:24:20.962454+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "OmniTrend ATR Scalper",
+      "safe_name": "OmniTrend_ATR_Scalper",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "REJECTED: Script is an execution framework/automation bot (matched keyword: 'webhook'). This is not a mathematical signal generator and cannot be transpiled for RL feature extraction.",
+    "skip_count": 1,
+    "archived_at": "2026-04-05T11:30:26.149807+00:00"
+  },
+  "Donchian-Basis-Cross-with-Band-TP.pine": {
+    "file_path": "input\\Donchian-Basis-Cross-with-Band-TP.pine",
+    "status": "evaluated",
+    "registered_at": "2026-04-05T12:03:50.286999+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T12:03:50.301228+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "Donchian Basis Cross with Band TP",
+      "safe_name": "Donchian_Basis_Cross_with_Band_TP",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=19 is below the RL minimum of 150.",
+    "skip_count": 2
+  },
+  "Sensex-Institutional-Level-Breakout-500-Point-Grids.pine": {
+    "file_path": "input\\Sensex-Institutional-Level-Breakout-500-Point-Grids.pine",
+    "status": "evaluated",
+    "registered_at": "2026-04-05T12:03:50.286999+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T12:04:13.393538+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "Sensex 9:45 Break-Even @ 200pts",
+      "safe_name": "sensex_institutional_level_breakout_500_point_grids",
+      "timeframe": "5m",
+      "lookback_bars": 1
+    },
+    "category": "Breakout",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Highly market-specific strategy hardcoded for BSE Sensex intraday sessions (IST timezone, 9:45 AM snapshot, 3:25 PM EOD close). The 500-point round-number grid is only meaningful for an index trading at ~70,000–80,000 pts; it has no relevance to BTC price ranges or 24/7 crypto markets. Session-gating logic (can_trade window, is_start_time) is fundamentally incompatible with continuous crypto trading and cannot be generalized without gutting the core premise. The break-even trail uses a persistent var bool trail_activated across bars that creates complex stateful transpilation risk. Overall: low portability, low RL generalizability, skip.",
+    "skip_count": 2
+  },
+  "Gold-DXY-Reversal-Strategy-LJxV6-2-0-R-R-tool-Partial-TPs.pine": {
+    "file_path": "input\\Gold-DXY-Reversal-Strategy-LJxV6-2-0-R-R-tool-Partial-TPs.pine",
+    "status": "evaluated",
+    "registered_at": "2026-04-05T12:10:22.885861+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T12:10:22.889749+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "Gold/DXY Reversal Strategy V6",
+      "safe_name": "Gold_DXY_Reversal_Strategy_V6",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=83 is below the RL minimum of 150.",
+    "skip_count": 2
+  },
+  "MMT-Ichi-Workflow-Strategy.pine": {
+    "file_path": "input\\MMT-Ichi-Workflow-Strategy.pine",
+    "status": "evaluated",
+    "registered_at": "2026-04-05T12:10:22.885861+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T12:10:22.892748+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "MMT Ichi Workflow Strategy",
+      "safe_name": "MMT_Ichi_Workflow_Strategy",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=12 is below the RL minimum of 150.",
+    "skip_count": 2
+  },
+  "Strategy-D-Market-Structure-only-MS-is-KING.pine": {
+    "file_path": "input\\Strategy-D-Market-Structure-only-MS-is-KING.pine",
+    "status": "evaluated",
+    "registered_at": "2026-04-05T12:10:22.887862+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T12:10:22.895748+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "Strategy D - HH/HL Visual + Entry Zones",
+      "safe_name": "Strategy_D___HH_HL_Visual___Entry_Zones",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=1 is below the RL minimum of 150.",
+    "skip_count": 2
+  },
+  "kinetic-inertia-short-1h.pine": {
+    "file_path": "input\\kinetic-inertia-short-1h.pine",
+    "status": "failed",
+    "registered_at": "2026-04-05T12:16:31.801759+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T12:16:57.559369+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "Kinetic Inertia Short 1h",
+      "safe_name": "kinetic_inertia_short_1h",
+      "timeframe": "1h",
+      "lookback_bars": 21
+    },
+    "category": "Momentum",
+    "btc_score": 5,
+    "project_score": 5,
+    "recommendation_reason": "Physics-inspired momentum exhaustion strategy using velocity (ROC), acceleration, and volume-weighted kinetic energy to time short entries. Profit factor of 1.3 and 349 trades provide a reasonable sample, but 27.3% max drawdown and Sharpe of 0.70 are weak. Short-only design limits bull-market utility. Project value is solid: the kinetic energy construct (0.5 * volume * ROC^2) is a novel, self-contained pattern with no MTF complexity, making it a clean transpilation candidate that adds conceptual diversity to the strategy library.",
+    "conversion_attempts": 1,
+    "failed_at": "2026-04-05T12:32:26.279407+00:00"
+  },
+  "MTF-EMA-Engulf-Retest-NQ-1m.pine": {
+    "file_path": "input\\MTF-EMA-Engulf-Retest-NQ-1m.pine",
+    "status": "failed",
+    "registered_at": "2026-04-05T12:16:31.801759+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T12:17:26.184111+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "MTF EMA Engulf + Retest - NQ 1m",
+      "safe_name": "mtf_ema_engulf_retest_nq_1m",
+      "timeframe": "1m",
+      "lookback_bars": 200
+    },
+    "category": "Trend",
+    "btc_score": 4,
+    "project_score": 5,
+    "recommendation_reason": "Weak live metrics (PF 1.128, Sharpe 0.425) limit BTC score despite 924 trades providing statistical weight. Project score is elevated by high transpilation complexity: 8 MTF request.security calls across 4 higher timeframes requiring resampling utilities, a multi-state machine (watching/bull_mode/bars_since/signal_low/signal_high) with expiry and invalidation branches, engulfing candle pattern detection, and EMA cloud (max/min band) logic. NQ-specific fixed-point SL/TP reduces general applicability. Worth converting to exercise MTF resampling and bar-indexed state tracking patterns.",
+    "skip_count": 1,
+    "conversion_attempts": 1,
+    "failed_at": "2026-04-06T08:37:02.973794+00:00"
+  },
+  "voidflow-short-engine.pine": {
+    "file_path": "input\\voidflow-short-engine.pine",
+    "status": "evaluated",
+    "registered_at": "2026-04-05T12:16:31.801759+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-05T12:17:26.189111+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "VoidFlow Short Engine",
+      "safe_name": "VoidFlow_Short_Engine",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "REJECTED: Script is an execution framework/automation bot (matched keyword: 'webhook'). This is not a mathematical signal generator and cannot be transpiled for RL feature extraction.",
+    "skip_count": 2
   }
 }

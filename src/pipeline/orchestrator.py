@@ -120,7 +120,7 @@ def run_orchestrator(
             except OSError:
                 pass
 
-        watchdog = threading.Timer(900, _kill_on_timeout)
+        watchdog = threading.Timer(1500, _kill_on_timeout)
         try:
             watchdog.start()
             for line in process.stdout:
@@ -171,8 +171,8 @@ def run_orchestrator(
                 process.terminate()
 
         if killed_by_watchdog.is_set():
-            strat_logger.error("Orchestrator timed out after 900s.")
-            print_error("Orchestrator timed out after 15 minutes.")
+            strat_logger.error("Orchestrator timed out after 1500s.")
+            print_error("Orchestrator timed out after 25 minutes.")
             return False, run_dir
 
         missing_log_tokens = _LOG_TOKENS - seen_log_tokens
