@@ -942,7 +942,7 @@
     "status": "evaluation_failed",
     "registered_at": "2026-04-02T15:56:14.610239+00:00",
     "scrape_source": "popular",
-    "evaluated_at": "2026-04-06T08:22:01.931771+00:00",
+    "evaluated_at": "2026-04-06T19:16:55.223564+00:00",
     "evaluation_status": "read_error",
     "pine_metadata": {
       "name": "ETH-Pro-Strategy-Long-Short-30m-V3-Alerts",
@@ -1081,7 +1081,7 @@
     "status": "evaluation_failed",
     "registered_at": "2026-04-02T16:09:44.888483+00:00",
     "scrape_source": "popular",
-    "evaluated_at": "2026-04-06T08:22:01.935871+00:00",
+    "evaluated_at": "2026-04-06T19:16:55.226563+00:00",
     "evaluation_status": "read_error",
     "pine_metadata": {
       "name": "KFin-Huynh",
@@ -1621,8 +1621,8 @@
     "archived_at": "2026-04-05T11:30:26.149807+00:00"
   },
   "Donchian-Basis-Cross-with-Band-TP.pine": {
-    "file_path": "input\\Donchian-Basis-Cross-with-Band-TP.pine",
-    "status": "evaluated",
+    "file_path": "archive\\Donchian-Basis-Cross-with-Band-TP\\Donchian-Basis-Cross-with-Band-TP.pine",
+    "status": "archived",
     "registered_at": "2026-04-05T12:03:50.286999+00:00",
     "scrape_source": "popular",
     "evaluated_at": "2026-04-05T12:03:50.301228+00:00",
@@ -1637,11 +1637,12 @@
     "btc_score": 0,
     "project_score": 0,
     "recommendation_reason": "Rejected before selector: total_trades=19 is below the RL minimum of 150.",
-    "skip_count": 2
+    "skip_count": 3,
+    "archived_at": "2026-04-06T18:07:56.149989+00:00"
   },
   "Sensex-Institutional-Level-Breakout-500-Point-Grids.pine": {
-    "file_path": "input\\Sensex-Institutional-Level-Breakout-500-Point-Grids.pine",
-    "status": "evaluated",
+    "file_path": "archive\\Sensex-Institutional-Level-Breakout-500-Point-Grids\\Sensex-Institutional-Level-Breakout-500-Point-Grids.pine",
+    "status": "archived",
     "registered_at": "2026-04-05T12:03:50.286999+00:00",
     "scrape_source": "popular",
     "evaluated_at": "2026-04-05T12:04:13.393538+00:00",
@@ -1656,11 +1657,12 @@
     "btc_score": 0,
     "project_score": 0,
     "recommendation_reason": "Highly market-specific strategy hardcoded for BSE Sensex intraday sessions (IST timezone, 9:45 AM snapshot, 3:25 PM EOD close). The 500-point round-number grid is only meaningful for an index trading at ~70,000–80,000 pts; it has no relevance to BTC price ranges or 24/7 crypto markets. Session-gating logic (can_trade window, is_start_time) is fundamentally incompatible with continuous crypto trading and cannot be generalized without gutting the core premise. The break-even trail uses a persistent var bool trail_activated across bars that creates complex stateful transpilation risk. Overall: low portability, low RL generalizability, skip.",
-    "skip_count": 2
+    "skip_count": 3,
+    "archived_at": "2026-04-06T18:07:56.166988+00:00"
   },
   "Gold-DXY-Reversal-Strategy-LJxV6-2-0-R-R-tool-Partial-TPs.pine": {
-    "file_path": "input\\Gold-DXY-Reversal-Strategy-LJxV6-2-0-R-R-tool-Partial-TPs.pine",
-    "status": "evaluated",
+    "file_path": "archive\\Gold-DXY-Reversal-Strategy-LJxV6-2-0-R-R-tool-Partial-TPs\\Gold-DXY-Reversal-Strategy-LJxV6-2-0-R-R-tool-Partial-TPs.pine",
+    "status": "archived",
     "registered_at": "2026-04-05T12:10:22.885861+00:00",
     "scrape_source": "popular",
     "evaluated_at": "2026-04-05T12:10:22.889749+00:00",
@@ -1675,11 +1677,12 @@
     "btc_score": 0,
     "project_score": 0,
     "recommendation_reason": "Rejected before selector: total_trades=83 is below the RL minimum of 150.",
-    "skip_count": 2
+    "skip_count": 3,
+    "archived_at": "2026-04-06T18:07:56.169013+00:00"
   },
   "MMT-Ichi-Workflow-Strategy.pine": {
-    "file_path": "input\\MMT-Ichi-Workflow-Strategy.pine",
-    "status": "evaluated",
+    "file_path": "archive\\MMT-Ichi-Workflow-Strategy\\MMT-Ichi-Workflow-Strategy.pine",
+    "status": "archived",
     "registered_at": "2026-04-05T12:10:22.885861+00:00",
     "scrape_source": "popular",
     "evaluated_at": "2026-04-05T12:10:22.892748+00:00",
@@ -1694,11 +1697,12 @@
     "btc_score": 0,
     "project_score": 0,
     "recommendation_reason": "Rejected before selector: total_trades=12 is below the RL minimum of 150.",
-    "skip_count": 2
+    "skip_count": 3,
+    "archived_at": "2026-04-06T18:07:56.170080+00:00"
   },
   "Strategy-D-Market-Structure-only-MS-is-KING.pine": {
-    "file_path": "input\\Strategy-D-Market-Structure-only-MS-is-KING.pine",
-    "status": "evaluated",
+    "file_path": "archive\\Strategy-D-Market-Structure-only-MS-is-KING\\Strategy-D-Market-Structure-only-MS-is-KING.pine",
+    "status": "archived",
     "registered_at": "2026-04-05T12:10:22.887862+00:00",
     "scrape_source": "popular",
     "evaluated_at": "2026-04-05T12:10:22.895748+00:00",
@@ -1713,11 +1717,12 @@
     "btc_score": 0,
     "project_score": 0,
     "recommendation_reason": "Rejected before selector: total_trades=1 is below the RL minimum of 150.",
-    "skip_count": 2
+    "skip_count": 3,
+    "archived_at": "2026-04-06T18:07:56.172084+00:00"
   },
   "kinetic-inertia-short-1h.pine": {
-    "file_path": "input\\kinetic-inertia-short-1h.pine",
-    "status": "failed",
+    "file_path": "archive\\kinetic-inertia-short-1h\\kinetic-inertia-short-1h.pine",
+    "status": "completed",
     "registered_at": "2026-04-05T12:16:31.801759+00:00",
     "scrape_source": "popular",
     "evaluated_at": "2026-04-05T12:16:57.559369+00:00",
@@ -1733,11 +1738,15 @@
     "project_score": 5,
     "recommendation_reason": "Physics-inspired momentum exhaustion strategy using velocity (ROC), acceleration, and volume-weighted kinetic energy to time short entries. Profit factor of 1.3 and 349 trades provide a reasonable sample, but 27.3% max drawdown and Sharpe of 0.70 are weak. Short-only design limits bull-market utility. Project value is solid: the kinetic energy construct (0.5 * volume * ROC^2) is a novel, self-contained pattern with no MTF complexity, making it a clean transpilation candidate that adds conceptual diversity to the strategy library.",
     "conversion_attempts": 1,
-    "failed_at": "2026-04-05T12:32:26.279407+00:00"
+    "failed_at": "2026-04-05T12:32:26.279407+00:00",
+    "archived_at": "2026-04-06T18:40:51.521638+00:00",
+    "skip_count": 0,
+    "converted_at": "2026-04-06T18:40:51.521638+00:00",
+    "output_dir": "output\\kinetic_inertia_short_1h\\2026-04-06_18-38-06"
   },
   "MTF-EMA-Engulf-Retest-NQ-1m.pine": {
-    "file_path": "input\\MTF-EMA-Engulf-Retest-NQ-1m.pine",
-    "status": "failed",
+    "file_path": "archive\\MTF-EMA-Engulf-Retest-NQ-1m\\MTF-EMA-Engulf-Retest-NQ-1m.pine",
+    "status": "evaluated",
     "registered_at": "2026-04-05T12:16:31.801759+00:00",
     "scrape_source": "popular",
     "evaluated_at": "2026-04-05T12:17:26.184111+00:00",
@@ -1752,13 +1761,14 @@
     "btc_score": 4,
     "project_score": 5,
     "recommendation_reason": "Weak live metrics (PF 1.128, Sharpe 0.425) limit BTC score despite 924 trades providing statistical weight. Project score is elevated by high transpilation complexity: 8 MTF request.security calls across 4 higher timeframes requiring resampling utilities, a multi-state machine (watching/bull_mode/bars_since/signal_low/signal_high) with expiry and invalidation branches, engulfing candle pattern detection, and EMA cloud (max/min band) logic. NQ-specific fixed-point SL/TP reduces general applicability. Worth converting to exercise MTF resampling and bar-indexed state tracking patterns.",
-    "skip_count": 1,
+    "skip_count": 2,
     "conversion_attempts": 1,
-    "failed_at": "2026-04-06T08:37:02.973794+00:00"
+    "failed_at": "2026-04-06T08:37:02.973794+00:00",
+    "archived_at": "2026-04-06T18:07:56.176163+00:00"
   },
   "voidflow-short-engine.pine": {
-    "file_path": "input\\voidflow-short-engine.pine",
-    "status": "evaluated",
+    "file_path": "archive\\voidflow-short-engine\\voidflow-short-engine.pine",
+    "status": "archived",
     "registered_at": "2026-04-05T12:16:31.801759+00:00",
     "scrape_source": "popular",
     "evaluated_at": "2026-04-05T12:17:26.189111+00:00",
@@ -1773,6 +1783,268 @@
     "btc_score": 0,
     "project_score": 0,
     "recommendation_reason": "REJECTED: Script is an execution framework/automation bot (matched keyword: 'webhook'). This is not a mathematical signal generator and cannot be transpiled for RL feature extraction.",
-    "skip_count": 2
+    "skip_count": 3,
+    "archived_at": "2026-04-06T18:07:56.178165+00:00"
+  },
+  "AI-MES-London-Open-Breakout.pine": {
+    "file_path": "archive\\AI-MES-London-Open-Breakout\\AI-MES-London-Open-Breakout.pine",
+    "status": "archived",
+    "registered_at": "2026-04-06T17:54:10.012018+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T17:54:10.022955+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "AI MES London Open Breakout",
+      "safe_name": "AI_MES_London_Open_Breakout",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=99 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-06T18:07:56.180219+00:00"
+  },
+  "LuxAlgo-SMC-Pro-Ultimate-v6.pine": {
+    "file_path": "archive\\LuxAlgo-SMC-Pro-Ultimate-v6\\LuxAlgo-SMC-Pro-Ultimate-v6.pine",
+    "status": "archived",
+    "registered_at": "2026-04-06T17:54:10.012018+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T17:54:10.025909+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "LuxAlgo SMC Pro Ultimate",
+      "safe_name": "LuxAlgo_SMC_Pro_Ultimate",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: signal logic depends on self-evaluation state via `strategy.netprofit`.",
+    "skip_count": 1,
+    "archived_at": "2026-04-06T18:07:56.182219+00:00"
+  },
+  "LuxAlgo-SMC-Pro-Ultimate.pine": {
+    "file_path": "archive\\LuxAlgo-SMC-Pro-Ultimate\\LuxAlgo-SMC-Pro-Ultimate.pine",
+    "status": "archived",
+    "registered_at": "2026-04-06T17:54:10.020910+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T17:54:10.030004+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "LuxAlgo SMC Pro Ultimate",
+      "safe_name": "LuxAlgo_SMC_Pro_Ultimate",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=27 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-06T18:07:56.183233+00:00"
+  },
+  "AI-MES-Globex-Overnight-Strategy.pine": {
+    "file_path": "archive\\AI-MES-Globex-Overnight-Strategy\\AI-MES-Globex-Overnight-Strategy.pine",
+    "status": "archived",
+    "registered_at": "2026-04-06T18:00:24.229130+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T18:00:24.231112+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "AI MES Globex Overnight Strategy",
+      "safe_name": "AI_MES_Globex_Overnight_Strategy",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=15 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-06T18:07:56.184220+00:00"
+  },
+  "PG-QSD-for-Nifty-Future.pine": {
+    "file_path": "archive\\PG-QSD-for-Nifty-Future\\PG-QSD-for-Nifty-Future.pine",
+    "status": "completed",
+    "registered_at": "2026-04-06T18:00:24.229130+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T18:00:54.828016+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "Quant Sentiment & Spread Master",
+      "safe_name": "pg_qsd_for_nifty_future",
+      "timeframe": "15m",
+      "lookback_bars": 63
+    },
+    "category": "Momentum",
+    "btc_score": 2,
+    "project_score": 5,
+    "recommendation_reason": "Explicitly calibrated for Nifty Futures with hard-coded contract specs (strike_step=100, ATM_range=300) and relies on synthetic options OI data unavailable on TradingView for any instrument including BTC — backtest reliability is the author's own caveat. BTC score is near-floor. For transpilation: the `ta.cum()` infinite-lookback cumulative volume sums are problematic for a fixed MIN_CANDLES_REQUIRED guard; the stateful reversal-buffer state machine (var lH/lL/tS) requires careful bar-by-bar loop simulation; and `request.security(..._OI)` falls back to volume when symbol is invalid (handleable), but the overall logic is Nifty-regime-tuned and unlikely to generalize. Project score is mid given these structural challenges.",
+    "skip_count": 1,
+    "converted_at": "2026-04-06T18:23:51.925652+00:00",
+    "archived_at": "2026-04-06T18:23:51.925652+00:00",
+    "output_dir": "output\\pg_qsd_for_nifty_future\\2026-04-06_18-14-58"
+  },
+  "XAUUSD-M5-Hybrid-EMA-9-15-Partial-TP-Runner.pine": {
+    "file_path": "archive\\XAUUSD-M5-Hybrid-EMA-9-15-Partial-TP-Runner\\XAUUSD-M5-Hybrid-EMA-9-15-Partial-TP-Runner.pine",
+    "status": "completed",
+    "registered_at": "2026-04-06T18:00:24.229130+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T18:01:24.425215+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "XAUUSD M5 Hybrid EMA 9/15 (Partial TP + Runner)",
+      "safe_name": "xauusd_m5_hybrid_ema_9_15_partial_tp_runner",
+      "timeframe": "5m",
+      "lookback_bars": 45
+    },
+    "category": "Trend",
+    "btc_score": 4,
+    "project_score": 5,
+    "recommendation_reason": "Clean EMA 9/15 crossover with rejection candle filter and MTF M15 confirmation via request.security — handled by our resampling utils. Dual exit system (50% partial TP + trailing runner) is well-defined and implementable. 2200 trades is a solid sample size and PF=3.902 looks strong, but 0.08% max drawdown is suspiciously low and raises overfitting concerns. TP/SL values (1.0 and 5.0 gold points) are XAUUSD-specific and require recalibration for BTC, limiting cross-asset utility. Moderate project fit: logic is straightforward but instrument-specificity and drawdown anomaly reduce confidence.",
+    "converted_at": "2026-04-06T18:07:56.120990+00:00",
+    "archived_at": "2026-04-06T18:07:56.120990+00:00",
+    "output_dir": "output\\xauusd_m5_hybrid_ema_9_15_partial_tp_runner\\2026-04-06_18-01-24"
+  },
+  "AI-MES-Asian-Session-Strategy.pine": {
+    "file_path": "archive\\AI-MES-Asian-Session-Strategy\\AI-MES-Asian-Session-Strategy.pine",
+    "status": "archived",
+    "registered_at": "2026-04-06T18:14:58.227674+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T18:14:58.241676+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "AI MES Asian Session Strategy",
+      "safe_name": "AI_MES_Asian_Session_Strategy",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=20 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-06T18:23:51.931653+00:00"
+  },
+  "Volatility-Expansion-Fake-Breakout-Strategy.pine": {
+    "file_path": "archive\\Volatility-Expansion-Fake-Breakout-Strategy\\Volatility-Expansion-Fake-Breakout-Strategy.pine",
+    "status": "archived",
+    "registered_at": "2026-04-06T18:14:58.228672+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T18:14:58.244730+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "Volatility Expansion + Fake Breakout Strategy",
+      "safe_name": "Volatility_Expansion___Fake_Breakout_Strategy",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=104 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-06T18:23:51.934163+00:00"
+  },
+  "Buy-and-Sell-Volume-Oscillator.pine": {
+    "file_path": "archive\\Buy-and-Sell-Volume-Oscillator\\Buy-and-Sell-Volume-Oscillator.pine",
+    "status": "archived",
+    "registered_at": "2026-04-06T18:38:06.759570+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T18:38:06.776329+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "CDV EMA Cross Strategy v6",
+      "safe_name": "CDV_EMA_Cross_Strategy_v6",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=20 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-06T18:40:51.529711+00:00"
+  },
+  "maXXit-EMA-V6-5-2-8.pine": {
+    "file_path": "archive\\maXXit-EMA-V6-5-2-8\\maXXit-EMA-V6-5-2-8.pine",
+    "status": "archived",
+    "registered_at": "2026-04-06T18:38:06.760594+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T18:38:06.779435+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "maXXit EMA[V6 5.2.8 Em]",
+      "safe_name": "maXXit_EMA_V6_5_2_8_Em",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=101 is below the RL minimum of 150.",
+    "skip_count": 1,
+    "archived_at": "2026-04-06T18:40:51.531636+00:00"
+  },
+  "AI-MES-Structure-Break-Strategy.pine": {
+    "file_path": "input\\AI-MES-Structure-Break-Strategy.pine",
+    "status": "evaluated",
+    "registered_at": "2026-04-06T19:16:30.344523+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T19:16:30.360518+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "AI MES Structure Break Strategy",
+      "safe_name": "AI_MES_Structure_Break_Strategy",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=127 is below the RL minimum of 150.",
+    "skip_count": 1
+  },
+  "CDV-EMA-Cross-Strategy-v6.pine": {
+    "file_path": "input\\CDV-EMA-Cross-Strategy-v6.pine",
+    "status": "completed",
+    "registered_at": "2026-04-06T19:16:30.344523+00:00",
+    "scrape_source": "unknown",
+    "evaluated_at": "2026-04-06T19:16:55.216581+00:00",
+    "evaluation_status": "scored",
+    "pine_metadata": {
+      "name": "CDV EMA Cross Strategy v6",
+      "safe_name": "cdv_ema_cross_strategy_v6",
+      "timeframe": "any",
+      "lookback_bars": 21
+    },
+    "category": "Trend",
+    "btc_score": 5,
+    "project_score": 5,
+    "recommendation_reason": "EMA crossover applied to Cumulative Delta Volume (CDV) candles with optional Heikin Ashi smoothing. CDV is highly relevant for crypto markets where volume delta reflects aggressive buying/selling pressure, giving this strategy an edge over price-only EMA systems. Logic is clean and fully bidirectional (long/short). Transpilation complexity is moderate: ta.cum() maps to cumsum(), nz() requires null-zero handling, and the recursive haopen (var float) must be handled with iterative row-wise logic or shift(). No request.security or MTF dependencies keeps the conversion straightforward. Good candidate overall.",
+    "completed_at": "2026-04-06T19:22:52.411123+00:00",
+    "pr_url": "https://github.com/AlgoTrading-Capstone/pinescript-to-python-converter/pull/37"
+  },
+  "SPXL-Buy-The-Panic-VIX.pine": {
+    "file_path": "input\\SPXL-Buy-The-Panic-VIX.pine",
+    "status": "evaluated",
+    "registered_at": "2026-04-06T19:16:30.344523+00:00",
+    "scrape_source": "popular",
+    "evaluated_at": "2026-04-06T19:16:55.221565+00:00",
+    "evaluation_status": "precheck_rejected",
+    "pine_metadata": {
+      "name": "SPXL - Buy The Panic V9",
+      "safe_name": "SPXL___Buy_The_Panic_V9",
+      "timeframe": "1h",
+      "lookback_bars": 100
+    },
+    "category": "Other",
+    "btc_score": 0,
+    "project_score": 0,
+    "recommendation_reason": "Rejected before selector: total_trades=14 is below the RL minimum of 150.",
+    "skip_count": 1
   }
 }
